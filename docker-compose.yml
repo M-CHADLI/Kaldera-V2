@@ -1,0 +1,12 @@
+services:
+  partenaire:
+    build: ./external_agent
+    environment:
+      PARTENAIRE_JETON: ${PARTENAIRE_JETON:-jeton-de-demo}
+    ports:
+      - "8100:8100"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8100/_sim/etat')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
