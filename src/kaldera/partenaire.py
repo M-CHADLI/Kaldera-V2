@@ -15,8 +15,8 @@ def url_partenaire(url: str | None = None) -> str:
     return (url or os.environ.get("PARTENAIRE_URL") or URL_PAR_DEFAUT).rstrip("/")
 
 
-def evaluer_risque(demande: dict[str, Any], url: str | None = None) -> dict[str, Any] | None:
-    """Demande l'avis anti-fraude du partenaire pour une demande.
+def evaluer_risque(donnees: dict[str, Any], url: str | None = None) -> dict[str, Any] | None:
+    """Demande l'avis anti-fraude du partenaire pour les champs du contrat d'un dossier.
 
     Retourne l'évaluation du partenaire, ou ``None`` si elle n'a pas pu être obtenue.
     """
@@ -28,7 +28,7 @@ def evaluer_risque(demande: dict[str, Any], url: str | None = None) -> dict[str,
             "message": {
                 "role": "user",
                 "messageId": str(uuid.uuid4()),
-                "parts": [{"kind": "data", "data": demande}],
+                "parts": [{"kind": "data", "data": donnees}],
             }
         },
     }

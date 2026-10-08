@@ -35,6 +35,9 @@ DELAI_DECLARATION_VOL_JOURS = 5
 
 SEUIL_DELEGATION = 10_000.0
 
+# Mode dégradé (§9) : au-delà, escalade vers la cellule anti-fraude
+SEUIL_MODE_DEGRADE = 1_500.0
+
 # Indicateurs déclenchant le contrôle anti-fraude
 SEUIL_MONTANT_FRAUDE = 5_000.0
 ANCIENNETE_SENSIBLE_JOURS = 90
