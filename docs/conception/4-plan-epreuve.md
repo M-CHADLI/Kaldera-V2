@@ -14,10 +14,13 @@
 
 | Mesure | Code fourni (avant) | Équipe (après) |
 |---|---|---|
-| Tests d'acceptance réussis | [à mesurer avec `make test`] | 100 % visés |
-| Fiches `en_attente` (blocages silencieux) | [à mesurer] | 0 |
+| Tests d'acceptance réussis | **11 / 56** | **56 / 56** |
+| Scénarios conformes à l'attendu (banc d'épreuve, 3 rejeux) | — | **28 / 28**, stables |
+| Fiches `en_attente` (blocages silencieux) | BCL-01 et toute demande sans avis du partenaire | 0 |
 | Champs hors contrat envoyés au partenaire | Toute la demande | 0 |
-| Durée maximale d'une demande | Illimitée (`timeout=None`) | ≤ 8 s |
+| Durée maximale d'une demande | Illimitée (`timeout=None`) | 3,07 s observées (borne : 8 s) |
+
+Le détail des ajustements est dans le [journal](../journal-ajustements.md), et les mesures dans [epreuve-resultats.md](../epreuve-resultats.md).
 
 ## Scénarios × signaux × ajustements
 

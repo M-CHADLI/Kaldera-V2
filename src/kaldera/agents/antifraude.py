@@ -1,7 +1,7 @@
 """Anti-fraude : faut-il consulter le partenaire, et que dit-il ? (specs_metier.md, §7)
 
-Calcule les indicateurs F1 à F4 (un déclencheur, pas un jugement) et transmet l'avis du
-partenaire. N'émet jamais d'avis lui-même.
+Calcule les indicateurs F1 à F4 (un déclencheur, pas un jugement) et transmet l'avis validé
+du partenaire. N'émet jamais d'avis lui-même et ne recopie jamais une réponse rejetée.
 """
 
 from __future__ import annotations
@@ -9,9 +9,10 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from .. import regles
+from ..partenaire import Consultation
 from .base import Resultat
 
-Consultation = Callable[[dict[str, Any]], "dict[str, Any] | None"]
+Consulter = Callable[[dict[str, Any]], Consultation]
 
 
 class AntiFraude:
@@ -19,7 +20,7 @@ class AntiFraude:
     section = "avis_fraude"
     action = "evaluer_risque"
 
-    def __init__(self, consulter: Consultation) -> None:
+    def __init__(self, consulter: Consulter) -> None:
         self._consulter = consulter
 
     def traiter(self, vue: dict[str, Any]) -> Resultat:
@@ -27,14 +28,20 @@ class AntiFraude:
         indicateurs = indicateurs_risque(donnees, vue["montant_justifie"])
         if not indicateurs:
             return Resultat("conclu", {"statut": "non_requis", "indicateurs": []})
-        avis = self._consulter(donnees)
-        if avis is None:
+        consultation = self._consulter(donnees)
+        appels = int(consultation.appel_effectue)
+        if consultation.avis is None:
             return Resultat(
                 "conclu",
-                {"statut": "indisponible", "indicateurs": indicateurs},
-                appels_externes=1,
+                {
+                    "statut": "indisponible",
+                    "indicateurs": indicateurs,
+                    "rejet": {"couche": consultation.couche, "raison": consultation.raison},
+                },
+                appels_externes=appels,
                 echec=True,
             )
+        avis = consultation.avis
         return Resultat(
             "conclu",
             {
@@ -42,9 +49,9 @@ class AntiFraude:
                 "indicateurs": indicateurs,
                 "niveau": avis["niveau"],
                 "score": avis["score"],
-                "evaluation_id": avis.get("evaluation_id"),
+                "evaluation_id": avis["evaluation_id"],
             },
-            appels_externes=1,
+            appels_externes=appels,
         )
 
 

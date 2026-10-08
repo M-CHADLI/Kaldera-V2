@@ -9,7 +9,7 @@ import json
 from time import perf_counter
 from typing import Any
 
-from . import decision, espace_assure, partenaire, vues
+from . import decision, espace_assure, partenaire, rapport, vues
 from .agents import STATUTS, Agent, AntiFraude, Eligibilite, Estimation, Pieces, Resultat
 from .bornes import BORNES
 from .etat import Etat
@@ -43,20 +43,33 @@ class Superviseur:
     nom = "superviseur"
 
     def __init__(
-        self, partenaire_url: str | None = None, bornes: dict[str, Any] | None = None
+        self,
+        partenaire_url: str | None = None,
+        bornes: dict[str, Any] | None = None,
+        client: partenaire.ClientPartenaire | None = None,
     ) -> None:
         self.bornes = dict(bornes or BORNES)
+        # Un client par lot : le registre anti-doublon et le disjoncteur sont partagés.
+        self.client = client or partenaire.ClientPartenaire(
+            partenaire_url,
+            delai_s=self.bornes["delai_partenaire_s"],
+            seuil_pannes=self.bornes["disjoncteur_echecs"],
+        )
         self.eligibilite = Eligibilite()
         self.pieces = Pieces()
         self.estimation = Estimation()
-        self.antifraude = AntiFraude(
-            lambda donnees: partenaire.evaluer_risque(donnees, partenaire_url)
-        )
+        self.antifraude = AntiFraude(self._consulter_partenaire)
+        self._etat: Etat | None = None
+
+    def _consulter_partenaire(self, donnees: dict[str, Any]) -> partenaire.Consultation:
+        """L'appel est pris sur le budget de la demande : jamais au-delà de duree_max_s."""
+        ecoule = self._etat.ecoule_s() if self._etat else 0.0
+        return self.client.consulter(donnees, delai_s=self.bornes["duree_max_s"] - ecoule - 0.5)
 
     # -------------------------------------------------------------- traitement
 
     def traiter(self, demande: dict[str, Any]) -> dict[str, Any]:
-        etat = Etat(demande)
+        etat = self._etat = Etat(demande)
         try:
             self._derouler(etat)
         except BorneAtteinte as borne:
@@ -236,6 +249,8 @@ def construire_fiche(etat: Etat) -> dict[str, Any]:
         "regle": issue["regle"],
         "trace": etat.trace,
         "arret": etat.arret,
+        "rapport": rapport.pour_gestionnaire(etat),
+        "rapport_assure": rapport.pour_assure(etat),
     }
 
 

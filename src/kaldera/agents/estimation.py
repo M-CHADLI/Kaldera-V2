@@ -21,7 +21,12 @@ class Estimation:
         montants = calculer_montant(
             vue["montant_declare"], vue["factures"], vue["franchise"], vue["plafond"]
         )
-        return Resultat("conclu", {"formule": vue["formule"], **montants})
+        contexte = {
+            "formule": vue["formule"],
+            "franchise": vue["franchise"],
+            "montant_declare": vue["montant_declare"],
+        }
+        return Resultat("conclu", {**contexte, **montants})
 
 
 def calculer_montant(
