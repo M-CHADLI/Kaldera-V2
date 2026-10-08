@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaldera V2 · console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+  :root {
+    --bg: #F6F7F9; --card: #FFFFFF; --muted: #EEF1F5; --fg: #0F172A; --fg-2: #475569;
+    --line: #D5DAE1; --accent: #15803D; --accent-soft: #DCFCE7; --esc: #B45309; --esc-soft: #FEF3C7;
+    --ko: #B91C1C; --ko-soft: #FEE2E2; --open: #6D28D9; --open-soft: #EDE9FE;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+    --sans: "IBM Plex Sans", system-ui, "Segoe UI", sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #020617; --card: #0E1223; --muted: #1A1E2F; --fg: #F1F5F9; --fg-2: #94A3B8;
+      --line: #334155; --accent: #4ADE80; --accent-soft: rgba(74,222,128,.14); --esc: #FBBF24;
+      --esc-soft: rgba(251,191,36,.14); --ko: #F87171; --ko-soft: rgba(248,113,113,.14);
+      --open: #A78BFA; --open-soft: rgba(167,139,250,.14); color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--sans); }
+  header { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--card); position: sticky; top: 0; z-index: 2; }
+  .brand { font: 800 15px var(--mono); letter-spacing: .02em; }
+  .brand span { color: var(--accent); }
+  .pill { font: 600 12px var(--mono); padding: 4px 9px; border-radius: 3px; border: 1px solid var(--line); white-space: nowrap; }
+  .pill.ok { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+  .pill.ko { color: var(--ko); background: var(--ko-soft); border-color: var(--ko); }
+  .pill.esc { color: var(--esc); background: var(--esc-soft); border-color: var(--esc); }
+  .pill.open { color: var(--open); background: var(--open-soft); border-color: var(--open); }
+  #bornes { font: 12px var(--mono); color: var(--fg-2); margin-left: auto; }
+  main { display: grid; grid-template-columns: 340px minmax(0, 1fr); min-height: calc(100vh - 56px); }
+  aside { border-right: 1px solid var(--line); padding: 16px; overflow-y: auto; max-height: calc(100vh - 56px); position: sticky; top: 56px; }
+  .filtres { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  button, select, textarea { font: inherit; color: inherit; }
+  .chip { font: 12px var(--mono); background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 6px 9px; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .scen { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 6px; cursor: pointer; }
+  .scen:hover, .scen[aria-current="true"] { background: var(--muted); }
+  .scen b { font: 600 13px var(--mono); margin-right: 8px; }
+  .scen small { display: block; color: var(--fg-2); font: 12px var(--mono); }
+  section { padding: 20px 24px; min-width: 0; }
+  h1 { font: 700 22px var(--mono); margin: 0 0 4px; letter-spacing: -.01em; }
+  .sous { color: var(--fg-2); margin: 0 0 16px; }
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .btn { background: var(--accent); color: var(--bg); border: 0; border-radius: 3px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+  .btn:disabled { opacity: .5; cursor: progress; }
+  select { background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 8px; }
+  .fiche { background: var(--card); border: 1px solid var(--line); border-radius: 4px; margin-bottom: 14px; }
+  .fiche-tete { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .fiche-tete .ref { font: 700 14px var(--mono); }
+  .montant { font: 700 16px var(--mono); margin-left: auto; }
+  .motif { padding: 10px 14px; color: var(--fg-2); border-bottom: 1px solid var(--line); }
+  .onglets { display: flex; gap: 2px; padding: 8px 14px 0; }
+  .onglet { background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 10px; cursor: pointer; font: 12px var(--mono); color: var(--fg-2); }
+  .onglet[aria-selected="true"] { color: var(--fg); border-color: var(--accent); }
+  pre { margin: 0; padding: 14px; font: 12.5px/1.55 var(--mono); white-space: pre-wrap; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--fg-2); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+  h2 { font: 700 15px var(--mono); margin: 26px 0 10px; }
+  textarea { width: 100%; min-height: 220px; background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 10px; font: 12.5px var(--mono); }
+  .vide { color: var(--fg-2); border: 1px dashed var(--line); border-radius: 4px; padding: 28px; text-align: center; }
+  .erreur { color: var(--ko); }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { position: static; max-height: 320px; border-right: 0; border-bottom: 1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">KALDERA<span>/</span>V2 · console</div>
+  <span id="sante" class="pill">partenaire : …</span>
+  <div id="bornes"></div>
+</header>
+<main>
+  <aside>
+    <div class="filtres" id="filtres" role="toolbar" aria-label="Filtrer par catégorie"></div>
+    <nav id="liste" aria-label="Scénarios"></nav>
+  </aside>
+  <section>
+    <h1 id="titre">Choisissez un scénario</h1>
+    <p class="sous" id="sous">Rejouez un scénario de recette contre le partenaire simulé, puis lisez les fiches, les rapports et les traces.</p>
+    <div class="actions">
+      <label for="mode">Partenaire</label>
+      <select id="mode">
+        <option value="scenario">comportement prévu par le scénario</option>
+        <option value="normal">normal</option>
+        <option value="lent">lent</option>
+        <option value="invalide">invalide</option>
+        <option value="panne">en panne</option>
+      </select>
+      <button class="btn" id="rejouer" disabled>Rejouer</button>
+      <span id="etat" class="sous" style="margin:0"></span>
+    </div>
+    <div id="resultats"><div class="vide">Aucun scénario rejoué pour l'instant.</div></div>
+    <h2>Métriques par agent</h2>
+    <div id="metriques" class="vide">Elles apparaissent après un premier rejeu.</div>
+    <h2>Soumettre une demande</h2>
+    <textarea id="json" spellcheck="false" aria-label="Demande au format JSON"></textarea>
+    <div class="actions" style="margin-top:10px"><button class="btn" id="soumettre">Traiter la demande</button></div>
+    <div id="soumission"></div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const euros = (m) => m == null ? "" : m.toLocaleString("fr-FR", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " €";
+let SCENARIOS = [], choisi = null, filtre = "tous";
+
+function pillIssue(f) {
+  if (f.issue === "decision") return `<span class="pill ${f.decision === "acceptee" ? "ok" : "ko"}">${f.decision === "acceptee" ? "acceptée" : "refusée"}</span>`;
+  return `<span class="pill esc">escalade · ${esc(f.file)}</span>`;
+}
+
+function carte(f, attendu, conforme, i) {
+  const badges = [pillIssue(f)];
+  if (f.mode_degrade) badges.push('<span class="pill open">mode dégradé</span>');
+  if (f.arret) badges.push(`<span class="pill open">arrêt · ${esc(f.arret.borne)}</span>`);
+  if (f.avis_fraude) badges.push(`<span class="pill">avis ${esc(f.avis_fraude.niveau)} · ${f.avis_fraude.score}</span>`);
+  if (conforme !== undefined) badges.push(`<span class="pill ${conforme ? "ok" : "ko"}">${conforme ? "conforme à l'attendu" : "écart à l'attendu"}</span>`);
+  const trace = f.trace.map((e, n) => `<tr><td class="num">${n + 1}</td><td>${esc(e.agent)}</td><td>${esc(e.action)}</td><td>${esc(e.ecrit.join(", ") || "—")}</td><td>${esc(e.statut)}</td><td class="num">${e.duree_ms}</td></tr>`).join("");
+  return `<article class="fiche">
+    <div class="fiche-tete"><span class="ref">${esc(f.reference)}</span>${badges.join("")}<span class="montant">${euros(f.montant_rembourse)}</span></div>
+    <div class="motif">${esc(f.motif)}</div>
+    <div class="onglets" role="tablist">
+      <button class="onglet" role="tab" aria-selected="true" data-cible="g${i}">Rapport gestionnaire</button>
+      <button class="onglet" role="tab" aria-selected="false" data-cible="a${i}">Rapport assuré</button>
+      <button class="onglet" role="tab" aria-selected="false" data-cible="t${i}">Trace (${f.trace.length} étapes)</button>
+    </div>
+    <pre id="g${i}">${esc(f.rapport)}</pre>
+    <pre id="a${i}" hidden>${esc(f.rapport_assure)}</pre>
+    <div id="t${i}" hidden><table><tr><th>#</th><th>Agent</th><th>Action</th><th>Écrit</th><th>Statut</th><th>ms</th></tr>${trace}</table></div>
+  </article>`;
+}
+
+function brancherOnglets(racine) {
+  racine.querySelectorAll(".fiche").forEach((fiche) => {
+    fiche.querySelectorAll(".onglet").forEach((onglet) => onglet.addEventListener("click", () => {
+      fiche.querySelectorAll(".onglet").forEach((o) => { o.setAttribute("aria-selected", String(o === onglet)); $(o.dataset.cible).hidden = o !== onglet; });
+    }));
+  });
+}
+
+function afficherMetriques(m) {
+  const lignes = Object.entries(m).map(([agent, s]) => `<tr><td>${esc(agent)}</td><td class="num">${s.appels}</td><td class="num">${s.echecs}</td><td class="num">${s.latence_ms}</td><td class="num">${s.appels_externes}</td></tr>`).join("");
+  $("metriques").className = "";
+  $("metriques").innerHTML = `<table><tr><th>Agent</th><th>Appels</th><th>Échecs</th><th>Latence (ms)</th><th>Appels externes</th></tr>${lignes}</table>`;
+}
+
+function afficherListe() {
+  const cats = ["tous", ...new Set(SCENARIOS.map((s) => s.categorie))];
+  $("filtres").innerHTML = cats.map((c) => `<button class="chip" data-cat="${c}" aria-pressed="${c === filtre}">${c}</button>`).join("");
+  $("filtres").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { filtre = b.dataset.cat; afficherListe(); }));
+  const visibles = SCENARIOS.filter((s) => filtre === "tous" || s.categorie === filtre);
+  $("liste").innerHTML = visibles.map((s) => `<button class="scen" data-id="${s.id}" aria-current="${choisi && choisi.id === s.id}"><b>${s.id}</b>${esc(s.titre)}<small>partenaire ${esc(s.partenaire.mode)}${s.partenaire.variante ? " · " + esc(s.partenaire.variante) : ""} · ${s.demandes} demande(s)</small></button>`).join("");
+  $("liste").querySelectorAll(".scen").forEach((b) => b.addEventListener("click", () => choisir(b.dataset.id)));
+}
+
+function choisir(id) {
+  choisi = SCENARIOS.find((s) => s.id === id);
+  $("titre").textContent = `${choisi.id} · ${choisi.titre}`;
+  $("sous").textContent = `Catégorie ${choisi.categorie} · ${choisi.demandes} demande(s) · partenaire prévu : ${choisi.partenaire.mode}`;
+  $("rejouer").disabled = false;
+  afficherListe();
+}
+
+async function rejouer() {
+  $("rejouer").disabled = true; $("etat").textContent = "Traitement en cours…";
+  try {
+    const r = await fetch(`/api/scenarios/${choisi.id}/rejouer?mode=${$("mode").value}`, {method: "POST"});
+    const corps = await r.json();
+    if (!r.ok) throw new Error(corps.detail);
+    $("etat").textContent = `Terminé en ${corps.duree_s} s · ${corps.conformes.filter(Boolean).length}/${corps.conformes.length} conforme(s)`;
+    $("resultats").innerHTML = corps.fiches.map((f, i) => carte(f, corps.attendus[i], corps.conformes[i], i)).join("");
+    brancherOnglets($("resultats"));
+    afficherMetriques(corps.metriques);
+  } catch (e) {
+    $("etat").innerHTML = `<span class="erreur">${esc(e.message)}</span>`;
+  } finally { $("rejouer").disabled = false; }
+}
+
+async function soumettre() {
+  try {
+    const r = await fetch("/api/demandes", {method: "POST", headers: {"Content-Type": "application/json"}, body: $("json").value});
+    const corps = await r.json();
+    if (!r.ok) throw new Error(typeof corps.detail === "string" ? corps.detail : "demande invalide");
+    $("soumission").innerHTML = carte(corps, null, undefined, "s");
+    brancherOnglets($("soumission"));
+  } catch (e) { $("soumission").innerHTML = `<p class="erreur">${esc(e.message)}</p>`; }
+}
+
+async function demarrer() {
+  SCENARIOS = await (await fetch("/api/scenarios")).json();
+  afficherListe();
+  const b = await (await fetch("/api/bornes")).json();
+  $("bornes").textContent = `bornes : ${b.etapes_max} étapes · ${b.duree_max_s} s · ${b.complements_max} compléments · partenaire ${b.delai_partenaire_s} s`;
+  const s = await (await fetch("/api/sante")).json();
+  $("sante").textContent = `partenaire : ${s.partenaire}`;
+  $("sante").className = `pill ${s.partenaire === "en ligne" ? "ok" : "ko"}`;
+  $("json").value = JSON.stringify({reference: "KAL-26-9001", assure: {id_client: "C-000", nom: "Exemple", prenom: "Anne", email: "anne@example.org", telephone: "0600000000", iban: "FR7600000000000000000000000", adresse: "1 rue de l'Exemple", code_postal: "69003"}, contrat: {numero: "H-000", formule: "confort", date_souscription: "2021-01-15", statut: "actif", cotisations_a_jour: true}, sinistre: {type: "degat_des_eaux", date_survenance: "2026-09-01", date_declaration: "2026-09-03", montant_declare: 1800.0, description: "Fuite sous l'évier"}, pieces: [{type: "facture", lisible: true, montant: 1800.0}, {type: "photo", lisible: true}], historique: {sinistres_12_mois: 0}, espace_assure: {depots: []}}, null, 2);
+}
+
+$("rejouer").addEventListener("click", rejouer);
+$("soumettre").addEventListener("click", soumettre);
+demarrer();
+</script>
+</body>
+</html>

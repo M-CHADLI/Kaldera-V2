@@ -10,3 +10,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  console:
+    build: .
+    environment:
+      PARTENAIRE_URL: http://partenaire:8100
+      PARTENAIRE_JETON: ${PARTENAIRE_JETON:-jeton-de-demo}
+    ports:
+      - "8000:8000"
+    depends_on:
+      partenaire:
+        condition: service_healthy

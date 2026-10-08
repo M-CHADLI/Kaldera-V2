@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main, integration-projet]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  qualite:
+    name: Qualité (ruff, mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy src
+
+  tests:
+    name: Tests et couverture (≥ 85 %)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Tests d'acceptance et unitaires
+        run: >
+          uv run pytest --cov=kaldera --cov-fail-under=85 --cov-report=term-missing
+          --cov-report=xml --junitxml=rapport-tests.xml
+      - name: Banc d'épreuve (28 scénarios, 3 rejeux)
+        run: uv run python scripts/epreuve.py --repetitions 3 --sortie epreuve-resultats.md
+      - name: Résultats d'épreuve dans le résumé du job
+        if: always()
+        run: cat epreuve-resultats.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Preuves d'exécution
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preuves-execution
+          path: |
+            coverage.xml
+            rapport-tests.xml
+            epreuve-resultats.md
+
+  deploiement:
+    name: Déploiement de test (Docker Compose)
+    needs: [qualite, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build
+      - name: Démarrage de la console et du partenaire simulé
+        run: docker compose up -d --wait
+      - name: Contrôle de santé et rejeu de PAN-01 sur la pile déployée
+        run: |
+          for i in $(seq 1 30); do curl -fs http://localhost:8000/api/sante && break; sleep 2; done
+          curl -fs -X POST http://localhost:8000/api/scenarios/PAN-01/rejouer \
+            | python3 -c "import json, sys; r = json.load(sys.stdin); assert all(r['conformes']), r['conformes']; print('PAN-01 conforme sur la pile déployée')"
+      - name: Journaux en cas d'échec
+        if: failure()
+        run: docker compose logs
+      - name: Arrêt
+        if: always()
+        run: docker compose down
