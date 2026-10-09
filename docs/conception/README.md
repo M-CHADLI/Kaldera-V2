@@ -31,6 +31,7 @@ flowchart LR
 | 3 | [A2A et mode dégradé](3-a2a-mode-degrade.md) | Contrat, filtre des données, validation, arbre de décision, sécurité, partenaire maison et déploiement, évolutions du contrat |
 | 4 | [Plan d'épreuve](4-plan-epreuve.md) | Scénarios × signaux × ajustements, règle d'ajustement, journal |
 | + | [Rapport de décision](5-rapport-de-decision.md) | Un rapport qui motive et explique chaque décision |
+| + | [Analyse de dossier](7-analyse-de-dossier.md) | Un dossier importé (contrat, déclaration, factures, photos, plainte) devient une demande validée et une fiche à relire |
 | + | [Modèle de décision System One](6-modele-system-one.md) | Où un modèle comme Jev a sa place, et où il est exclu ; point d'extension en hypothèse |
 
 La preuve d'exécution des tests d'acceptance est dans [preuves-execution.md](../preuves-execution.md).

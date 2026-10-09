@@ -7,7 +7,7 @@
 - **On teste l'équipe, pas un agent isolé.** Les 28 scénarios de [scenarios.jsonl](../../eval/scenarios.jsonl) sont rejoués de bout en bout via `traiter_demande` et `traiter_lot`, contre le partenaire simulé ([external_agent/app.py](../../external_agent/app.py)), piloté par ses routes `/_sim/*` (ou par [partner_ctl.py](../../scripts/partner_ctl.py) à la main).
 - **Deux niveaux de tests :**
   - la suite d'acceptance fournie ([tests/acceptance/](../../tests/acceptance/)), 56 tests, lancée par `make test` ;
-  - nos tests unitaires et d'intégration ([tests/unit/](../../tests/unit/)), 202 tests, qui vérifient en plus les règles de la trace, les bornes, le rapport de décision, la revue de fond, notre partenaire maison et l'absence de données personnelles dans l'historique.
+  - nos tests unitaires et d'intégration ([tests/unit/](../../tests/unit/)), 287 tests, qui vérifient en plus les règles de la trace, les bornes, le rapport de décision, la revue de fond, notre partenaire maison et l'absence de données personnelles dans l'historique.
 - **Le banc d'épreuve** ([scripts/epreuve.py](../../scripts/epreuve.py)) rejoue les 28 scénarios **3 fois** (`make epreuve`, et à chaque push en CI), avec la revue de fond par défaut (`regles`). Un scénario est stable si ses issues sont identiques d'un rejeu à l'autre.
 - **Stabilité avec un modèle** : si un LLM ou un modèle System One est branché, on prévoit 5 rejeux (`--repetitions 5`). Ce rejeu n'a pas encore été fait.
 - **Contre le partenaire réel** : la console déployée (livrable 3) rejoue un scénario contre notre partenaire, sans réglage possible et une seule fois par dossier.
@@ -17,7 +17,7 @@
 | Mesure | Code fourni (avant) | Équipe (après) |
 |---|---|---|
 | Tests d'acceptance réussis | **11 / 56** | **56 / 56** |
-| Tests au total (acceptance + unitaires) | 56 | **258**, couverture 99,35 % (lignes et branches) |
+| Tests au total (acceptance + unitaires) | 56 | **343**, couverture 98,43 % (lignes et branches) |
 | Scénarios conformes à l'attendu (banc d'épreuve, 3 rejeux) | — | **28 / 28**, stables |
 | Anomalies signalées par la revue de fond (`regles`) | — | **0** sur 28 scénarios × 3 rejeux |
 | Fiches `en_attente` (blocages silencieux) | BCL-01 et toute demande sans avis du partenaire | 0 |

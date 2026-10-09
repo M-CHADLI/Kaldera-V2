@@ -13,6 +13,8 @@ La console détecte le partenaire branché sur ``PARTENAIRE_URL`` :
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import time
@@ -21,10 +23,10 @@ from pathlib import Path
 from typing import Any, Literal
 
 import httpx
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
-from . import bornes, traiter_demande, traiter_lot
+from . import bornes, extraction, traiter_demande, traiter_lot
 from .partenaire import url_partenaire
 
 RACINE = Path(__file__).resolve().parents[2]
@@ -176,6 +178,64 @@ def soumettre(demande: dict[str, Any] = Body(...)) -> dict[str, Any]:
         raise HTTPException(422, f"demande mal formée : rubriques absentes {manquantes}")
     # Toute autre anomalie donne une escalade motivée, jamais une erreur silencieuse (E1).
     return traiter_demande(demande)
+
+
+@app.post("/api/analyse")
+async def analyser_dossier(request: Request) -> dict[str, Any]:
+    """Analyse un dossier PDF (corps de la requête = le PDF) : demande extraite et fiche à valider.
+
+    Rien n'est conservé : ni le PDF, ni son texte. L'utilisateur valide la demande, puis la
+    soumet à ``/api/demandes``.
+    """
+    declare = request.headers.get("content-length")
+    if declare and declare.isdigit() and int(declare) > extraction.TAILLE_MAX_OCTETS:
+        raise HTTPException(413, "fichier trop volumineux")
+    corps = bytearray()
+    async for morceau in request.stream():
+        corps += morceau
+        if len(corps) > extraction.TAILLE_MAX_OCTETS:
+            raise HTTPException(413, "fichier trop volumineux")
+    try:
+        return extraction.analyser(bytes(corps)).en_dict()
+    except extraction.PdfInvalide as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except extraction.ExtractionIndisponible as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+@app.post("/api/analyse-dossier")
+async def analyser_pieces(request: Request) -> dict[str, Any]:
+    """Analyse les pièces importées une à une : ``{"documents": [{"role", "nom", "contenu"}]}``.
+
+    ``contenu`` est le fichier en base64 ; ``role`` vaut contrat, declaration, dossier, facture,
+    plainte ou photo. Rien n'est conservé.
+    """
+    limite = extraction.TAILLE_TOTALE_MAX_OCTETS * 4 // 3 + 4096
+    corps = bytearray()
+    async for morceau in request.stream():
+        corps += morceau
+        if len(corps) > limite:
+            raise HTTPException(413, "dossier trop volumineux")
+    try:
+        entrees = json.loads(corps)["documents"]
+        documents = [
+            extraction.Document(
+                str(e["role"]),
+                str(e.get("nom") or e["role"]),
+                base64.b64decode(e["contenu"], validate=True),
+            )
+            for e in entrees
+        ]
+    except (ValueError, KeyError, TypeError, binascii.Error) as exc:
+        raise HTTPException(
+            422, "requête mal formée : documents attendus avec role, nom et contenu en base64"
+        ) from exc
+    try:
+        return extraction.analyser_documents(documents).en_dict()
+    except extraction.PdfInvalide as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except extraction.ExtractionIndisponible as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 def conforme(fiche: dict[str, Any], attendu: dict[str, Any]) -> bool:

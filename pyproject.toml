@@ -12,6 +12,7 @@ dependencies = [
     "langchain-core>=0.3,<0.4",
     "langchain-azure-ai>=0.1,<0.2",
     "langgraph>=0.2,<0.3",
+    "pypdf>=6.19.0",
 ]
 
 [dependency-groups]
@@ -20,6 +21,7 @@ dev = [
     "pytest-cov>=5,<7",
     "ruff>=0.6,<0.10",
     "mypy>=1.10,<2",
+    "reportlab>=5.0.1",
 ]
 
 [build-system]

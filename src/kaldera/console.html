@@ -70,6 +70,23 @@
   textarea { width: 100%; min-height: 220px; background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 10px; font: 12.5px var(--mono); }
   .vide { color: var(--fg-2); border: 1px dashed var(--line); border-radius: 4px; padding: 28px; text-align: center; }
   .erreur { color: var(--ko); }
+  .side-h { font: 700 13px var(--mono); margin: 0 0 4px; letter-spacing: .02em; }
+  .side-note { color: var(--fg-2); font-size: 12.5px; margin: 0 0 10px; }
+  .slot { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: var(--card); }
+  .slot-tete { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .slot-tete small { color: var(--fg-2); font-size: 11.5px; text-align: right; }
+  .imp { background: none; border: 1px dashed var(--fg-2); border-radius: 3px; padding: 6px 10px; font: 600 12.5px var(--mono); min-height: 34px; cursor: pointer; color: var(--fg); }
+  .imp:hover { border-color: var(--accent); color: var(--accent); }
+  .fichiers { list-style: none; margin: 6px 0 0; padding: 0; font: 12px var(--mono); }
+  .fichiers li { display: flex; justify-content: space-between; gap: 6px; align-items: center; padding: 3px 0; overflow-wrap: anywhere; }
+  .fichiers .ok { color: var(--accent); }
+  .fichiers button { background: none; border: 0; color: var(--fg-2); font-size: 14px; cursor: pointer; min-width: 28px; min-height: 28px; }
+  .depli { width: 100%; display: flex; justify-content: space-between; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 9px 12px; font: 600 13px var(--mono); cursor: pointer; margin: 14px 0 8px; min-height: 40px; }
+  .depli:hover { border-color: var(--fg-2); }
+  .depli small { color: var(--fg-2); font-weight: 400; }
+  .depli .fleche { transition: transform .2s; }
+  .depli[aria-expanded="true"] .fleche { transform: rotate(90deg); }
+  #zone-tests[hidden], #tests[hidden] { display: none; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { position: static; max-height: 320px; border-right: 0; border-bottom: 1px solid var(--line); } }
 </style>
 </head>
@@ -81,11 +98,28 @@
 </header>
 <main>
   <aside>
-    <div class="filtres" id="filtres" role="toolbar" aria-label="Filtrer par catégorie"></div>
-    <nav id="liste" aria-label="Scénarios"></nav>
+    <h2 class="side-h">Pièces du dossier</h2>
+    <p class="side-note">Importez les pièces demandées. Elles sont lues pour l'analyse et jamais conservées.</p>
+    <div id="slots"></div>
+    <button class="btn" id="analyser" style="width:100%">Analyser le dossier</button>
+    <p class="side-note" id="etat-pdf" style="margin-top:8px" aria-live="polite"></p>
+    <button class="depli" id="depli-tests" aria-expanded="false" aria-controls="tests"><span>Scénarios de test <small id="nb-tests"></small></span><span class="fleche" aria-hidden="true">▸</span></button>
+    <div id="tests" hidden>
+      <div class="filtres" id="filtres" role="toolbar" aria-label="Filtrer par catégorie"></div>
+      <nav id="liste" aria-label="Scénarios"></nav>
+    </div>
   </aside>
   <section>
-    <h1 id="titre">Choisissez un scénario</h1>
+    <h1>Dossier de remboursement</h1>
+    <p class="sous">Importez les pièces à gauche, vérifiez la fiche d'analyse, corrigez si besoin la demande, puis lancez le traitement.</p>
+    <h2>Fiche d'analyse</h2>
+    <pre id="fiche-pdf" class="vide">Aucun dossier analysé pour l'instant.</pre>
+    <h2>Demande à traiter</h2>
+    <textarea id="json" spellcheck="false" aria-label="Demande au format JSON"></textarea>
+    <div class="actions" style="margin-top:10px"><button class="btn" id="soumettre">Traiter la demande</button></div>
+    <div id="soumission"></div>
+    <div id="zone-tests" hidden>
+    <h2 id="titre">Choisissez un scénario</h2>
     <p class="sous" id="sous">Rejouez un scénario de recette contre le partenaire anti-fraude, puis lisez les fiches, les rapports et les traces.</p>
     <div class="actions">
       <label for="mode">Partenaire</label>
@@ -103,10 +137,7 @@
     <div id="resultats"><div class="vide">Aucun scénario rejoué pour l'instant.</div></div>
     <h2>Métriques par agent</h2>
     <div id="metriques" class="vide">Elles apparaissent après un premier rejeu.</div>
-    <h2>Soumettre une demande</h2>
-    <textarea id="json" spellcheck="false" aria-label="Demande au format JSON"></textarea>
-    <div class="actions" style="margin-top:10px"><button class="btn" id="soumettre">Traiter la demande</button></div>
-    <div id="soumission"></div>
+    </div>
   </section>
 </main>
 <script>
@@ -201,6 +232,65 @@ async function verifierSante() {
   $("note-reel").hidden = !reel;
 }
 
+const SLOTS = [
+  {role: "contrat", libelle: "Contrat", aide: "PDF", accept: "application/pdf,.pdf", multiple: false},
+  {role: "declaration", libelle: "Déclaration de sinistre", aide: "PDF", accept: "application/pdf,.pdf", multiple: false},
+  {role: "facture", libelle: "Facture(s)", aide: "PDF, une par fichier", accept: "application/pdf,.pdf", multiple: true},
+  {role: "photo", libelle: "Photo(s)", aide: "JPEG ou PNG", accept: "image/jpeg,image/png", multiple: true},
+  {role: "plainte", libelle: "Dépôt de plainte", aide: "PDF, pour un vol", accept: "application/pdf,.pdf", multiple: false},
+  {role: "dossier", libelle: "Dossier complet", aide: "tout en un seul PDF", accept: "application/pdf,.pdf", multiple: false}
+];
+const FICHIERS = {};
+
+function dessinerSlots() {
+  $("slots").innerHTML = SLOTS.map((s) => `<div class="slot"><div class="slot-tete"><button class="imp" data-role="${s.role}" aria-label="Importer : ${esc(s.libelle)}">+ ${esc(s.libelle)}</button><small>${esc(s.aide)}</small></div><ul class="fichiers" id="f-${s.role}"></ul><input type="file" id="in-${s.role}" hidden accept="${s.accept}" ${s.multiple ? "multiple" : ""}></div>`).join("");
+  SLOTS.forEach((s) => {
+    $("in-" + s.role).addEventListener("change", (e) => {
+      const nouveaux = Array.from(e.target.files);
+      FICHIERS[s.role] = s.multiple ? (FICHIERS[s.role] || []).concat(nouveaux) : nouveaux.slice(0, 1);
+      e.target.value = ""; listerFichiers(s.role);
+    });
+  });
+  $("slots").addEventListener("click", (e) => {
+    const imp = e.target.closest(".imp"); if (imp) return $("in-" + imp.dataset.role).click();
+    const sup = e.target.closest("[data-sup]"); if (sup) { FICHIERS[sup.dataset.role].splice(+sup.dataset.sup, 1); listerFichiers(sup.dataset.role); }
+  });
+}
+
+function listerFichiers(role) {
+  $("f-" + role).innerHTML = (FICHIERS[role] || []).map((f, i) => `<li><span><span class="ok">✓</span> ${esc(f.name)}</span><button data-role="${role}" data-sup="${i}" aria-label="Retirer ${esc(f.name)}">✕</button></li>`).join("");
+}
+
+async function enBase64(fichier) {
+  const octets = new Uint8Array(await fichier.arrayBuffer());
+  let s = ""; for (let i = 0; i < octets.length; i += 0x8000) s += String.fromCharCode.apply(null, octets.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+async function analyserDossier() {
+  const entrees = SLOTS.flatMap((s) => (FICHIERS[s.role] || []).map((f) => ({role: s.role, f})));
+  if (!entrees.length) { $("etat-pdf").innerHTML = '<span class="erreur">Importez au moins une pièce.</span>'; return; }
+  $("analyser").disabled = true; $("etat-pdf").textContent = "Analyse en cours…";
+  try {
+    const documents = [];
+    for (const e of entrees) documents.push({role: e.role, nom: e.f.name, contenu: await enBase64(e.f)});
+    const r = await fetch("/api/analyse-dossier", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({documents})});
+    const corps = await r.json();
+    if (!r.ok) throw new Error(typeof corps.detail === "string" ? corps.detail : "requête invalide");
+    $("fiche-pdf").className = ""; $("fiche-pdf").textContent = corps.fiche;
+    $("json").value = JSON.stringify(corps.demande, null, 2);
+    $("etat-pdf").innerHTML = corps.pret ? "Analyse prête : relisez la fiche, puis traitez la demande." : '<span class="erreur">Analyse à compléter : corrigez la demande avant de traiter.</span>';
+    $("fiche-pdf").scrollIntoView({behavior: "smooth", block: "start"});
+  } catch (e) { $("etat-pdf").innerHTML = `<span class="erreur">${esc(e.message)}</span>`; }
+  finally { $("analyser").disabled = false; }
+}
+
+function basculerTests() {
+  const ouvert = $("depli-tests").getAttribute("aria-expanded") !== "true";
+  $("depli-tests").setAttribute("aria-expanded", String(ouvert));
+  $("tests").hidden = !ouvert; $("zone-tests").hidden = !ouvert;
+}
+
 async function soumettre() {
   try {
     const r = await fetch("/api/demandes", {method: "POST", headers: {"Content-Type": "application/json"}, body: $("json").value});
@@ -213,6 +303,7 @@ async function soumettre() {
 
 async function demarrer() {
   SCENARIOS = await (await fetch("/api/scenarios")).json();
+  $("nb-tests").textContent = "(" + SCENARIOS.length + ")";
   afficherListe();
   const b = await (await fetch("/api/bornes")).json();
   $("bornes").textContent = `bornes : ${b.etapes_max} étapes · ${b.duree_max_s} s · ${b.complements_max} compléments · partenaire ${b.delai_partenaire_s} s`;
@@ -222,6 +313,9 @@ async function demarrer() {
 
 $("rejouer").addEventListener("click", rejouer);
 $("soumettre").addEventListener("click", soumettre);
+$("analyser").addEventListener("click", analyserDossier);
+$("depli-tests").addEventListener("click", basculerTests);
+dessinerSlots();
 demarrer();
 </script>
 </body>

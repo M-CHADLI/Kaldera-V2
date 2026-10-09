@@ -25,7 +25,10 @@ motivée, expliquée dans un rapport, même quand le partenaire est lent, menteu
   pseudonymisé par HMAC.
 - Notre propre partenaire anti-fraude (`partenaire_antifraude/`), conforme au contrat
   v2.0, sans routes de simulation, avec un score explicable par règles.
-- Console web : rejouer les scénarios, piloter le partenaire simulé, lire fiches,
+- Analyse de dossier : le contrat, la déclaration, les factures, les photos et le dépôt de plainte
+  sont importés pièce par pièce (ou en un seul PDF) ; un agent d'extraction produit la demande
+  au format du §3 et une fiche à valider avant tout traitement. Rien n'est conservé.
+- Console web : importer les pièces du dossier, rejouer les scénarios (repliés), piloter le partenaire simulé, lire fiches,
   rapports, traces et métriques par agent ; elle reconnaît un partenaire simulé, réel
   ou injoignable.
 - Déploiement sur Google Cloud Run (partenaire et console) ; banc d'épreuve et journal
@@ -65,6 +68,7 @@ Toutes sont listées dans [`.env.example`](.env.example). Aucune n'est nécessai
 | `KALDERA_SEUIL_CONFIANCE` | Seuil de confiance de la revue `system_one` | `0.8` |
 | `KALDERA_HISTORIQUE` | Chemin du fichier JSONL de l'historique neutralisé ; vide = désactivé | vide |
 | `KALDERA_CLE_HMAC` | Clé HMAC de pseudonymisation de `id_client` ; sans clé, `client` vaut `null` | vide |
+| `KALDERA_EXTRACTION` | Extraction du dossier : `champs` (lecture déterministe), `llm` (modèle, strict) ou `auto` (modèle puis repli) | `champs` |
 | `KALDERA_SCENARIOS` | Fichier de scénarios lu par la console | `eval/scenarios.jsonl` |
 | `APP_ENV`, `LOG_LEVEL` | Réservées ; le code ne les lit pas à ce jour | — |
 
@@ -73,6 +77,7 @@ Toutes sont listées dans [`.env.example`](.env.example). Aucune n'est nécessai
 ```bash
 make up                                           # console sur :8000, partenaire simulé sur :8100
 make web                                          # console seule, en local (avec make partenaire)
+uv run python -m kaldera.extraction exemples/dossier-exemple.pdf --traiter   # un PDF → fiche + décision
 make scenarios ARGS="--scenario NOM-01 --trace"   # un scénario en ligne de commande
 make epreuve                                      # 28 scénarios × 3, écrit docs/epreuve-resultats.md
 make cov                                          # couverture, rapport HTML dans htmlcov/
@@ -127,12 +132,14 @@ Détails et limites : [docs/conception/3-a2a-mode-degrade.md](docs/conception/3-
 - `src/kaldera/historique.py` — historique neutralisé (JSONL, pseudonymisation HMAC)
 - `src/kaldera/metriques.py` — métriques par agent, `anomalies` comprises
 - `src/kaldera/partenaire.py` — client A2A (liste blanche, délai, validation, registre et disjoncteur par lot)
+- `src/kaldera/extraction.py` — agent d'analyse de dossier (PDF, images) : extracteurs, validation, fiche
 - `src/kaldera/web.py`, `console.html` — console web
+- `exemples/` — dossier PDF et pièces d'exemple (données fictives) ; `scripts/exemple_dossier_pdf.py` les génère
 - `partenaire_antifraude/` — notre partenaire anti-fraude, déployable sur Cloud Run
 - `external_agent/` — service anti-fraude partenaire simulé et son contrat (`contrat.md`)
 - `eval/scenarios.jsonl` — scénarios de recette ; `scripts/epreuve.py` — banc d'épreuve
 - `scripts/deployer_partenaire.sh`, `deployer_console.sh` — déploiement Cloud Run ; `partner_ctl.py` — pilotage du simulateur
-- `tests/acceptance/` — suite d'acceptance fournie (56 tests) ; `tests/unit/` — tests unitaires (202)
+- `tests/acceptance/` — suite d'acceptance fournie (56 tests) ; `tests/unit/` — tests unitaires (287)
 - `docs/conception/` — dossier de conception ; `docs/journal-ajustements.md` — journal
 - `docs/epreuve-resultats.md` — dernière épreuve ; `docs/preuves-execution.md` — preuve d'exécution
 
