@@ -45,6 +45,7 @@
   .scen b { font: 600 13px var(--mono); margin-right: 8px; }
   .scen small { display: block; color: var(--fg-2); font: 12px var(--mono); }
   .appel { color: var(--esc); font-weight: 600; }
+  .consult { margin: 0 0 10px; font: 13px var(--mono); color: var(--fg-2); }
   section { padding: 20px 24px; min-width: 0; }
   h1 { font: 700 22px var(--mono); margin: 0 0 4px; letter-spacing: -.01em; }
   .sous { color: var(--fg-2); margin: 0 0 16px; }
@@ -312,12 +313,23 @@ function basculerTests() {
   $("tests").hidden = !ouvert; $("zone-tests").hidden = !ouvert;
 }
 
+// Ce que la fiche dit du partenaire : avis obtenu, mode dégradé, ou aucun appel.
+function etatPartenaire(f) {
+  if (f.avis_fraude) {
+    return `<span class="appel">Partenaire consulté</span> : risque ${esc(f.avis_fraude.niveau)}, score ${f.avis_fraude.score}.`;
+  }
+  if (f.mode_degrade) {
+    return '<span class="appel">Partenaire consulté sans avis exploitable</span> (indisponible, réponse rejetée ou dossier déjà évalué) : mode dégradé appliqué (§9).';
+  }
+  return "Partenaire non consulté : aucun indicateur F1 à F4, ou demande conclue avant le contrôle anti-fraude (§7).";
+}
+
 async function soumettre() {
   try {
     const r = await fetch("/api/demandes", {method: "POST", headers: {"Content-Type": "application/json"}, body: $("json").value});
     const corps = await r.json();
     if (!r.ok) throw new Error(typeof corps.detail === "string" ? corps.detail : "demande invalide");
-    $("soumission").innerHTML = carte(corps, null, undefined, "s");
+    $("soumission").innerHTML = `<p class="consult">${etatPartenaire(corps)}</p>` + carte(corps, null, undefined, "s");
     brancherOnglets($("soumission"));
   } catch (e) { $("soumission").innerHTML = `<p class="erreur">${esc(messageErreur(e))}</p>`; }
 }

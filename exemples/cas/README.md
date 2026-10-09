@@ -57,6 +57,11 @@ Le cas 06 contient une facture scannée : un PDF réduit à une image, sans couc
 identique dans les deux variantes. Le cas 14 n'a pas de photo, volontairement. Les photos des autres cas sont des
 images factices : le système vérifie leur présence, jamais leur contenu (voir la conception, document 7).
 
+**Seuls 5 cas consultent le partenaire anti-fraude : 04, 07, 11, 12 et 13.** Les autres concluent avant
+le contrôle anti-fraude ou n'ont aucun indicateur F1 à F4 (§7), donc rien n'apparaît dans le journal du
+partenaire. Le partenaire n'évalue chaque dossier qu'une fois : un second envoi du même cas est refusé
+(`-32029`) et la demande passe en mode dégradé. Le journal se vide quand le partenaire redémarre.
+
 ## Régénérer et vérifier
 
 ```bash
