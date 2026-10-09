@@ -302,8 +302,18 @@ CONTROLES: dict[str, Callable[[dict[str, Any]], list[str]]] = {
 
 CONSIGNE_LLM = (
     "Tu relis une section produite par un agent de traitement des demandes de remboursement "
-    "d'assurance habitation. Vérifie seulement sa cohérence interne (montants, booléens, "
-    "listes). Tu ne corriges rien. Réponds uniquement par un objet JSON "
+    "d'assurance habitation. Vérifie seulement sa cohérence interne, avec ces règles du métier :\n"
+    "- estimation : montant_retenu = le plus petit de montant_declare et montant_justifie ; "
+    "montant_estime = max(0, montant_retenu - franchise), puis limité à plafond. Un montant_estime "
+    "inférieur à montant_retenu est NORMAL (franchise). plafond_applique est vrai seulement si le "
+    "plafond a réduit le montant ; dans ce cas montant_estime = plafond.\n"
+    "- avis_fraude : score entre 0 et 1 ; niveau 'faible' si score < 0,40, 'modere' si < 0,75, "
+    "'eleve' sinon ; statut 'non_requis' seulement sans indicateur.\n"
+    "- pieces : conformes est vrai si et seulement si a_redemander est vide.\n"
+    "- eligibilite : eligible est vrai si et seulement si motifs est vide.\n"
+    "Calcule avant de conclure. Réponds 'anomalie' seulement si une règle ci-dessus est violée ; "
+    "en cas de doute, réponds 'conforme' (une fausse alerte coûte plus qu'un oubli). Tu ne corriges "
+    "rien. Réponds uniquement par un objet JSON "
     '{"statut": "conforme" | "anomalie" | "indetermine", "raison": "<une phrase>"}.'
 )
 

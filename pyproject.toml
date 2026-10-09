@@ -10,9 +10,9 @@ dependencies = [
     "pydantic>=2.7,<3",
     "langchain>=0.3,<0.4",
     "langchain-core>=0.3,<0.4",
-    "langchain-azure-ai>=0.1,<0.2",
     "langgraph>=0.2,<0.3",
     "pypdf>=6.19.0",
+    "langchain-openai>=0.3,<0.4",
 ]
 
 [dependency-groups]

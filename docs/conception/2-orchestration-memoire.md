@@ -111,7 +111,7 @@ Le superviseur contrôle toujours la **forme** des sorties. La **revue de fond**
 |---|---|---|
 | `regles` (défaut, et toute valeur vide ou inconnue) | Contrôles de cohérence déterministes, sans modèle : somme des factures, montant retenu, plafond signalé, niveau cohérent avec le score… | 0,5 s |
 | `aucune` | Pas de revue | — |
-| `llm` | Le modèle de langage de [llm.py](../../src/kaldera/llm.py) (Kimi-K2.6 sur Azure AI). Il ne reçoit que la section examinée, réduite à une liste blanche. | 2 s |
+| `llm` | Le modèle de langage de [llm.py](../../src/kaldera/llm.py) (gpt-5.4-mini sur Azure OpenAI). Il ne reçoit que la section examinée, réduite à une liste blanche. | 2 s |
 | `system_one` | Point d'extension en **hypothèse** : modèle de décision à sorties typées et confiance calibrée (livrable 6). Aucun service réel n'est branché. | 1 s |
 
 Garanties, quel que soit le réviseur ([revue.py:96-122](../../src/kaldera/revue.py#L96-L122)) :

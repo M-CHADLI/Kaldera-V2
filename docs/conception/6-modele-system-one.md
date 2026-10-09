@@ -51,7 +51,7 @@ Sans URL, chaque examen rend `indisponible` : le traitement continue, l'issue ne
 | Option du superviseur (`KALDERA_REVUE`) | Mesures | État au 9 octobre 2026 |
 |---|---|---|
 | Sans modèle (`regles`) | Référence | Mesurée sur 3 rejeux : 28/28 conformes et stables, 0 anomalie sur 348 examens, durée médiane d'un examen 0,5 ms (mesure locale) |
-| LLM (`llm`, Kimi-K2.6) | Latence, coût, stabilité, anomalies détectées | Non mesuré |
+| LLM (`llm`, gpt-5.4-mini) | Latence, coût, stabilité, anomalies détectées | Mesuré le 9 octobre 2026 sur 12 appels (sections d'estimation fictives) : **12 verdicts corrects sur 12**, 0 fausse alerte sur 6 sections valides, 6 anomalies injectées sur 6 détectées. **Latence : 1 s sur une anomalie évidente, 8 à 9 s sur une section valide**, donc au-delà du délai de 2 s de la revue : en conditions réelles, elle répond « indisponible » la plupart du temps. Une première mesure, avant d'expliquer les règles de calcul au modèle (consigne `CONSIGNE_LLM`), avait donné une fausse alerte sur une estimation correcte (la franchise). Coût non mesuré |
 | Modèle System One (`system_one`, Jev) | Mêmes mesures, plus la calibration de la confiance | Non mesuré : aucun service branché |
 
 ## Points de vigilance

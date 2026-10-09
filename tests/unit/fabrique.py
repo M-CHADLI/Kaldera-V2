@@ -72,3 +72,24 @@ class FauxClient:
     def consulter(self, donnees: dict[str, Any], delai_s: float | None = None) -> Consultation:
         self.appels.append(donnees)
         return self.consultation
+
+
+VARIABLES_MODELE = (
+    "AZURE_OPENAI_API_KEY",
+    "AZURE_OPENAI_ENDPOINT",
+    "AZURE_OPENAI_DEPLOYMENT_NAME",
+    "AZURE_OPENAI_API_VERSION",
+)
+
+
+def sans_modele(monkeypatch: Any) -> None:
+    """Aucun modèle configuré, quelles que soient les variables de la machine (.env)."""
+    for nom in VARIABLES_MODELE:
+        monkeypatch.delenv(nom, raising=False)
+
+
+def avec_azure_openai(monkeypatch: Any) -> None:
+    sans_modele(monkeypatch)
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "cle-de-test")
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://exemple.openai.azure.com/")
+    monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-test")

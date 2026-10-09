@@ -41,7 +41,7 @@ pièces importées → texte → extracteur → validation unique → fiche + de
 | `modèle` (`llm`) | Dossiers en texte libre | Le texte est présenté entre balises comme une donnée ; la réponse JSON est revalidée. **Strict** : sans modèle, l'analyse échoue. |
 | `auto` | | Essaie le modèle, puis retombe sur `champs` avec une note à vérifier. |
 
-Choix par `KALDERA_EXTRACTION`. **L'extracteur par modèle envoie le texte du dossier, donnée personnelle comprise, au fournisseur du modèle** : c'est un choix explicite, jamais le défaut. Les identifiants Azure ne sont pas configurés aujourd'hui : cet extracteur est testé avec un faux modèle, **pas avec le vrai**.
+Choix par `KALDERA_EXTRACTION`. **L'extracteur par modèle envoie le texte du dossier, donnée personnelle comprise, au fournisseur du modèle** : c'est un choix explicite, jamais le défaut. Il utilise gpt-5.4-mini (Azure OpenAI) : essayé le 9 octobre 2026 sur le dossier d'exemple fictif (6 s, même demande que la lecture par champs) ; les tests automatiques utilisent un faux modèle.
 
 ## Limites assumées
 

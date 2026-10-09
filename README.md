@@ -39,7 +39,7 @@ motivée, expliquée dans un rapport, même quand le partenaire est lent, menteu
 - Python 3.11 (uv)
 - FastAPI 0.115+ / uvicorn 0.30+ (console web, partenaire simulé, partenaire maison)
 - httpx 0.27+ (client A2A)
-- LangChain 0.3.x, langchain-azure-ai 0.1.x (Kimi-K2.6), facultatif : revue de fond `llm` seulement
+- LangChain 0.3.x (`langchain-openai`, Azure OpenAI gpt-5.4-mini), facultatif : revue de fond `llm` et extraction de dossier
 - pytest 8.x, pytest-cov (couverture minimale : 85 %)
 - Docker Compose (console + partenaire simulé)
 - Google Cloud Run et Artifact Registry, région `europe-west9` (Paris)
@@ -62,7 +62,8 @@ Toutes sont listées dans [`.env.example`](.env.example). Aucune n'est nécessai
 |---|---|---|
 | `PARTENAIRE_URL` | URL de base du partenaire anti-fraude | `http://localhost:8100` |
 | `PARTENAIRE_JETON` | Jeton Bearer du partenaire (lu par le client, le simulateur et notre partenaire) | vide |
-| `AZURE_AI_ENDPOINT`, `AZURE_AI_API_KEY`, `AZURE_AI_MODEL` | Modèle de langage, utilisé seulement par la revue `llm` | modèle `Kimi-K2.6` |
+| `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME`, `AZURE_OPENAI_API_VERSION` | Modèle de langage (Azure OpenAI, gpt-5.4-mini), utilisé par la revue `llm` et l'extraction `llm` ou `auto` ; la version d'API est ignorée avec un endpoint `/openai/v1` | vides |
+| `KALDERA_LLM_DELAI_S` | Délai maximal d'un appel au modèle, en secondes | `60` |
 | `KALDERA_REVUE` | Revue de fond : `regles`, `aucune`, `llm` ou `system_one` | `regles` |
 | `KALDERA_SYSTEM_ONE_URL`, `KALDERA_SYSTEM_ONE_CLE` | Service « System One » de la revue `system_one` (hypothèse, aucun service branché) | vides |
 | `KALDERA_SEUIL_CONFIANCE` | Seuil de confiance de la revue `system_one` | `0.8` |

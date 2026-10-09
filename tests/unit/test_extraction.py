@@ -17,6 +17,8 @@ import kaldera
 from kaldera import extraction as ex
 from kaldera import web
 
+from fabrique import avec_azure_openai, sans_modele
+
 DOSSIER = [
     "Dossier de demande de remboursement",
     "Référence : KAL-26-7001",
@@ -372,15 +374,13 @@ def test_choix_de_l_extracteur_et_modele_non_configure(monkeypatch: pytest.Monke
     ):
         monkeypatch.setenv("KALDERA_EXTRACTION", mode)
         assert [e.nom for e in ex.choisir_extracteur()] == noms
-    monkeypatch.delenv("AZURE_AI_ENDPOINT", raising=False)
-    monkeypatch.delenv("AZURE_AI_API_KEY", raising=False)
+    sans_modele(monkeypatch)
     with pytest.raises(ex.ExtractionIndisponible, match="non configuré"):
         ex.ExtracteurLLM().extraire("texte")
 
 
 def test_modele_configure_utilise_la_fabrique(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AZURE_AI_ENDPOINT", "https://exemple")
-    monkeypatch.setenv("AZURE_AI_API_KEY", "cle")
+    avec_azure_openai(monkeypatch)
     monkeypatch.setattr("kaldera.llm.get_llm", lambda: FauxModele(json.dumps(MODELE_JSON)))
     assert ex.ExtracteurLLM().extraire("texte").champs["sinistre.type"][0] == "vol"
 
@@ -418,7 +418,7 @@ def test_analyse_web_refuse_ce_qui_n_est_pas_un_pdf_ou_trop_gros(
 
 def test_analyse_web_modele_indisponible(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("KALDERA_EXTRACTION", "llm")
-    monkeypatch.delenv("AZURE_AI_ENDPOINT", raising=False)
+    sans_modele(monkeypatch)
     assert client.post("/api/analyse", content=pdf(DOSSIER)).status_code == 503
 
 
@@ -614,7 +614,7 @@ def test_analyse_web_par_pieces_erreurs_metier(monkeypatch: pytest.MonkeyPatch) 
     assert client.post("/api/analyse-dossier", content=b"x" * 5000).status_code == 413
     monkeypatch.undo()
     monkeypatch.setenv("KALDERA_EXTRACTION", "llm")
-    monkeypatch.delenv("AZURE_AI_ENDPOINT", raising=False)
+    sans_modele(monkeypatch)
     assert (
         _envoi([{"role": "contrat", "nom": "c.pdf", "contenu": _b64(pdf(CONTRAT))}]).status_code
         == 503

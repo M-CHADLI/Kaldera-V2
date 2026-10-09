@@ -301,11 +301,11 @@ class ExtracteurLLM:
 
 
 def _obtenir_llm() -> Any:
-    if not (os.environ.get("AZURE_AI_ENDPOINT") and os.environ.get("AZURE_AI_API_KEY")):
-        raise ExtractionIndisponible("modèle non configuré (AZURE_AI_ENDPOINT, AZURE_AI_API_KEY)")
-    from .llm import get_llm
+    from . import llm
 
-    return get_llm()
+    if not llm.llm_configure():
+        raise ExtractionIndisponible(f"modèle non configuré ({llm.description_attendue()})")
+    return llm.get_llm()
 
 
 def _consigne(texte: str) -> str:

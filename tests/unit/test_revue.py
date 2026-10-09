@@ -479,7 +479,7 @@ def test_revue_llm_sans_modele_configure_est_indisponible(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def absent() -> Any:
-        raise KeyError("AZURE_AI_ENDPOINT")
+        raise KeyError("AZURE_OPENAI_ENDPOINT")
 
     monkeypatch.setattr(llm, "get_llm", absent)
     signal = RevueLLM(delai_s=0.5).examiner("pieces", PIECES)
