@@ -163,7 +163,7 @@
       <input id="jeton" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" aria-describedby="jeton-aide jeton-erreur">
       <button class="bouton" type="submit">Afficher le journal</button>
     </div>
-    <p class="aide" id="jeton-aide">Le même que <code>PARTENAIRE_JETON</code>. Gardé dans cet onglet seulement (<code>sessionStorage</code>) et envoyé uniquement à <code>/journal</code> de ce service.</p>
+    <p class="aide" id="jeton-aide">La valeur de <code>PARTENAIRE_JETON</code> (la ligne entière collée depuis le <code>.env</code> est acceptée). Gardé dans cet onglet seulement (<code>sessionStorage</code>) et envoyé uniquement à <code>/journal</code> de ce service.</p>
     <p class="erreur" id="jeton-erreur" role="alert"></p>
   </form>
 
@@ -186,7 +186,7 @@
           <small id="compte"></small>
         </div>
         <ul id="echanges" aria-labelledby="journal-titre"></ul>
-        <p class="vide" id="liste-vide" hidden>Aucun échange consigné depuis le démarrage de cette instance.</p>
+        <p class="vide" id="liste-vide" hidden>Jeton accepté, mais aucun échange consigné depuis le dernier démarrage du service : un redéploiement ou une mise en veille vide le journal. Rejouez un scénario depuis la console Kaldera pour en voir un apparaître.</p>
         <p class="raccourcis">Flèches haut et bas pour parcourir, Entrée pour afficher le détail.</p>
       </section>
 
@@ -501,9 +501,18 @@
   }
 
   // ---------------------------------------------------------------- événements
+  // Accepte aussi une ligne collée telle quelle : « PARTENAIRE_JETON=… », « Bearer … », entre guillemets.
+  function nettoyerJeton(saisie) {
+    return saisie.trim()
+      .replace(/^PARTENAIRE_JETON\s*=\s*/i, '')
+      .replace(/^(?:authorization\s*:\s*)?bearer\s+/i, '')
+      .replace(/^(["'])(.*)\1$/, '$2')
+      .trim();
+  }
+
   $('acces').addEventListener('submit', (ev) => {
     ev.preventDefault();
-    const jeton = $('jeton').value.trim();
+    const jeton = nettoyerJeton($('jeton').value);
     if (!jeton) {
       $('jeton-erreur').textContent = 'Saisissez le jeton.';
       $('jeton').focus();
