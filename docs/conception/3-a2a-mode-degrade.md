@@ -106,7 +106,7 @@ Pour éprouver la liaison contre un vrai service, et pas seulement contre le sim
 
 | Sujet | Mise en œuvre |
 |---|---|
-| Routes | Agent Card (`/.well-known/agent.json`), `POST /a2a` (`message/send`) et `GET /health`, proposé en v2.1. **Aucune route de simulation** `/_sim/*` |
+| Routes | Agent Card (`/.well-known/agent.json`), `POST /a2a` (`message/send`) et `GET /health`, proposé en v2.1 ; le journal des échanges, en lecture seule (`GET /journal` et sa page `GET /`, [voir plus bas](#journal-des-échanges-et-sa-page-de-consultation)). **Aucune route de simulation** `/_sim/*` |
 | Jeton | Lu dans `PARTENAIRE_JETON` ; absent ou invalide → HTTP 401 |
 | Schéma strict | Les 7 champs, tous obligatoires, aucun autre ; sinon `-32602`, avec le détail (champs inconnus, absents ou invalides) |
 | Un appel par dossier | Registre des références évaluées, en mémoire ; un doublon → `-32029` |
@@ -127,6 +127,23 @@ Pour éprouver la liaison contre un vrai service, et pas seulement contre le sim
 - La console reconnaît un partenaire **réel** : il ne répond pas sur `/_sim/etat`, mais répond sur `/health` ou sur son Agent Card ([web.py:66-80](../../src/kaldera/web.py#L66-L80)). Face à lui, elle refuse de forcer une panne, une lenteur ou une réponse invalide (HTTP 409). Un second rejeu du même scénario déclenche le doublon `-32029`, donc le mode dégradé.
 
 Les vérifications faites sur ces services sont dans [preuves-execution.md](../preuves-execution.md#environnement-google-cloud).
+
+### Journal des échanges et sa page de consultation
+
+Pour voir ce que le partenaire reçoit et ce qu'il envoie, il garde en mémoire les derniers échanges sur `/a2a` ([app.py](../../partenaire_antifraude/app.py), section « journal »).
+
+| Sujet | Mise en œuvre |
+|---|---|
+| Lecture | `GET /journal` (JSON, plus récents en premier), protégé par **le même jeton Bearer** que `/a2a` ; sinon HTTP 401. Lecture seule : aucune route n'efface le journal ni ne simule une panne |
+| Page | `GET /` sert [journal.html](../../partenaire_antifraude/journal.html), lu au démarrage et copié dans l'image. La page est publique, mais n'affiche aucun échange tant que le jeton n'est pas saisi. Il est gardé dans l'onglet (`sessionStorage`) et envoyé seulement à `/journal`. Rafraîchissement toutes les 3 s, désactivable |
+| Une entrée | Numéro, horodatage UTC, durée en ms, statut HTTP, corps reçu, corps envoyé, et un résumé : méthode, dossier, puis niveau et score, ou code et message de l'erreur JSON-RPC |
+| Jamais consigné | Aucun en-tête, donc ni `Authorization` ni le jeton. Une requête sans jeton valide (401) est consignée **sans son corps** : sans jeton, personne ne remplit le journal de contenu arbitraire |
+| Bornes | `PARTENAIRE_JOURNAL_MAX` échanges (100 par défaut, ramené entre 1 et 1 000). Un corps qui n'est pas du JSON, ou qui dépasse 16 Kio, n'est gardé que sous forme d'extrait de 2 000 caractères |
+| Page durcie | Politique de sécurité du contenu : seul le script de la page s'exécute (empreinte SHA-256), et il n'appelle que ce service. Les données sont insérées comme texte, jamais comme HTML |
+
+- **Limites.** Le journal vit dans la mémoire de l'unique instance (`--max-instances 1`, comme le registre anti-doublon). Il est perdu au redémarrage, au redéploiement et à la mise en veille de Cloud Run. Des requêtes sans jeton peuvent évincer les échanges utiles : chacune y prend une place, même sans contenu. Ce n'est pas un journal d'audit : la production demanderait un stockage persistant et une durée de conservation.
+- Les corps attendus sont ceux du contrat v2.0 : 7 champs, sans donnée personnelle directe. Une requête non conforme est consignée telle quelle, champ interdit compris. C'est ce qui permet de constater le manquement ; une donnée interdite envoyée par erreur reste alors en mémoire jusqu'à ce qu'elle soit évincée.
+- Au passage, la lecture du corps de `/a2a` est devenue stricte. `NaN` et `Infinity`, qui ne sont pas du JSON, donnent `-32700` (corps illisible) : auparavant, un `montant_declare` à `Infinity` passait pour valide et recevait un avis. Un corps imbriqué sur plus de 64 niveaux donne aussi `-32700` ; au-delà d'environ 1 000 niveaux, il provoquait une erreur HTTP 500. Le jeton est comparé à temps constant.
 
 ## Évolutions proposées du contrat (v2.1)
 

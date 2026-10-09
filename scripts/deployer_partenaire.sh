@@ -45,6 +45,7 @@ echo "== Contrôle"
 curl -fs "$URL/health" && echo
 echo
 echo "Partenaire déployé : $URL"
+echo "Journal des échanges (avec le jeton) : $URL/"
 echo "Pour brancher Kaldera :"
 echo "  PARTENAIRE_URL=$URL"
 echo "  PARTENAIRE_JETON=$JETON"

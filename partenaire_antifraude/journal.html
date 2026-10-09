@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Partenaire anti-fraude · journal</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230F172A'/%3E%3Cpath d='M4 5h8M4 8h8M4 11h5' stroke='%234ADE80' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+  :root {
+    --bg: #F6F7F9; --card: #FFFFFF; --muted: #EEF1F5; --fg: #0F172A; --fg-2: #475569;
+    --line: #D5DAE1; --line-fort: #64748B;
+    --ok: #15803D; --ok-soft: #DCFCE7; --ko: #B91C1C; --ko-soft: #FEE2E2;
+    --esc: #92400E; --esc-soft: #FEF3C7; --info: #1D4ED8; --info-soft: #DBEAFE; --focus: #1D4ED8;
+    --j-cle: #0F172A; --j-chaine: #15803D; --j-num: #6D28D9; --j-lit: #92400E;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #020617; --card: #0E1223; --muted: #1A1E2F; --fg: #F1F5F9; --fg-2: #94A3B8;
+      --line: #334155; --line-fort: #64748B;
+      --ok: #4ADE80; --ok-soft: rgba(74, 222, 128, .14); --ko: #F87171; --ko-soft: rgba(248, 113, 113, .14);
+      --esc: #FBBF24; --esc-soft: rgba(251, 191, 36, .14); --info: #93C5FD; --info-soft: rgba(147, 197, 253, .12);
+      --focus: #93C5FD; --j-cle: #E2E8F0; --j-chaine: #4ADE80; --j-num: #C4B5FD; --j-lit: #FBBF24;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--sans); }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  button, input { font: inherit; color: inherit; }
+  code { font: .92em var(--mono); }
+  .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .saut { position: absolute; left: 16px; top: -60px; z-index: 10; background: var(--card); border: 1px solid var(--line-fort); padding: 8px 12px; border-radius: 3px; }
+  .saut:focus { top: 8px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 14px 24px; background: var(--card); border-bottom: 1px solid var(--line); }
+  .marque { margin: 0; font: 700 15px var(--mono); letter-spacing: .01em; }
+  .marque span { color: var(--fg-2); font-weight: 400; }
+  .carte { margin: 0; font: 12.5px var(--mono); color: var(--fg-2); overflow-wrap: anywhere; }
+  .droite { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .pastille { display: inline-block; font: 600 12px var(--mono); padding: 3px 8px; border-radius: 3px; border: 1px solid var(--line-fort); white-space: nowrap; }
+  .pastille.ok { color: var(--ok); background: var(--ok-soft); border-color: var(--ok); }
+  .pastille.ko { color: var(--ko); background: var(--ko-soft); border-color: var(--ko); }
+  .pastille.esc { color: var(--esc); background: var(--esc-soft); border-color: var(--esc); }
+
+  main { max-width: 1600px; margin: 0 auto; padding: 20px 24px 48px; }
+  .avis { max-width: 112ch; margin: 0 0 12px; padding: 10px 14px; border-left: 3px solid var(--info); background: var(--info-soft); border-radius: 3px; }
+  .avis p { margin: 0; }
+  .avis p + p { margin-top: 4px; }
+  details.carte-complete { margin: 0 0 18px; }
+  details.carte-complete summary { cursor: pointer; font: 600 13px var(--mono); color: var(--fg-2); padding: 4px 0; width: fit-content; }
+  details.carte-complete pre { background: var(--card); border: 1px solid var(--line); border-radius: 4px; margin-top: 6px; max-width: 112ch; }
+
+  .acces { max-width: 640px; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 4px; }
+  .acces label { display: block; font-weight: 600; margin-bottom: 6px; }
+  .champ { display: flex; flex-wrap: wrap; gap: 8px; }
+  .champ input { flex: 1 1 260px; min-width: 0; min-height: 44px; padding: 9px 12px; font: 14px var(--mono); background: var(--bg); border: 1px solid var(--line-fort); border-radius: 3px; }
+  .aide { margin: 8px 0 0; color: var(--fg-2); font-size: 13.5px; }
+  .erreur { margin: 8px 0 0; color: var(--ko); font-weight: 600; }
+  .bouton { min-height: 44px; padding: 8px 16px; border-radius: 3px; border: 1px solid var(--fg); background: var(--fg); color: var(--bg); font-weight: 600; cursor: pointer; }
+  .bouton.second { background: var(--card); color: var(--fg); border-color: var(--line-fort); }
+  .bouton.petit { min-height: 32px; padding: 3px 10px; font: 600 12px var(--mono); }
+  .bouton:hover { filter: brightness(1.12); }
+  .bouton.second:hover { background: var(--muted); filter: none; }
+
+  .barre { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin: 0 0 14px; }
+  .barre label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; min-height: 44px; }
+  .barre input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--fg); }
+  .maj { color: var(--fg-2); font: 12.5px var(--mono); }
+  .barre .fin { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .barre .fin span { color: var(--fg-2); font-size: 13.5px; }
+
+  .vue { display: grid; grid-template-columns: minmax(320px, 440px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  h2 { margin: 0 0 8px; font: 700 14px var(--mono); letter-spacing: .02em; }
+  h2:focus { outline: none; }
+  h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .tete-liste { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .tete-liste small { color: var(--fg-2); font: 12px var(--mono); white-space: nowrap; }
+  .liste ul { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 4px; max-height: calc(100vh - 230px); min-height: 120px; overflow-y: auto; }
+  .echange { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; width: 100%; min-height: 44px; padding: 8px 12px 8px 10px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); border-left: 4px solid var(--line-fort); cursor: pointer; }
+  li:last-child .echange { border-bottom: 0; }
+  .echange:hover { background: var(--muted); }
+  .echange:focus-visible { outline-offset: -3px; }
+  .echange[aria-current="true"] { background: var(--muted); }
+  .echange[aria-current="true"] .num::before { content: "▸ "; }
+  .echange .num { font: 600 12.5px var(--mono); }
+  .echange .heure, .echange .http { font: 12.5px var(--mono); color: var(--fg-2); }
+  .echange .http { justify-self: end; }
+  .echange .dossier { grid-column: 1 / 3; font: 600 13px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .echange .issue { justify-self: end; font: 600 12px var(--mono); padding: 1px 7px; border-radius: 3px; white-space: nowrap; }
+  .echange.succes { border-left-color: var(--ok); }
+  .echange.erreur-rpc { border-left-color: var(--ko); }
+  .echange.refus { border-left-color: var(--esc); }
+  .echange.succes .issue { color: var(--ok); background: var(--ok-soft); }
+  .echange.erreur-rpc .issue { color: var(--ko); background: var(--ko-soft); }
+  .echange.refus .issue { color: var(--esc); background: var(--esc-soft); }
+  .vide { margin: 0; padding: 24px 16px; color: var(--fg-2); text-align: center; border: 1px dashed var(--line-fort); border-radius: 4px; }
+  .raccourcis { margin: 6px 0 0; color: var(--fg-2); font-size: 12.5px; }
+
+  .detail { min-width: 0; }
+  .fiche { padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 4px; margin-bottom: 14px; }
+  .fiche-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .fiche-tete h2 { margin: 0; font-size: 16px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 10px 0 0; padding: 0; list-style: none; font: 12.5px var(--mono); color: var(--fg-2); }
+  .meta b { color: var(--fg); font-weight: 600; }
+  .message { margin: 10px 0 0; }
+  .paires { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+  figure { margin: 0; min-width: 0; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 4px; }
+  figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); font: 600 13px var(--mono); }
+  figcaption small { color: var(--fg-2); font-weight: 400; }
+  .note { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--esc-soft); color: var(--fg); font-size: 13.5px; }
+  pre { margin: 0; padding: 12px; font: 12.5px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 65vh; overflow: auto; }
+  .j-cle { color: var(--j-cle); font-weight: 600; }
+  .j-chaine { color: var(--j-chaine); }
+  .j-num { color: var(--j-num); }
+  .j-lit { color: var(--j-lit); font-weight: 600; }
+
+  @media (max-width: 1000px) {
+    .vue { grid-template-columns: minmax(0, 1fr); }
+    .liste ul { max-height: 50vh; }
+  }
+  @media (max-width: 640px) {
+    header { padding: 12px 16px; }
+    main { padding: 16px 16px 40px; }
+    .droite { margin-left: 0; }
+    .barre .fin { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<a class="saut" href="#journal-titre">Aller au journal</a>
+<header>
+  <h1 class="marque">Partenaire anti-fraude <span>· journal des échanges A2A</span></h1>
+  <p class="carte" id="carte-resume">Agent Card : chargement…</p>
+  <div class="droite">
+    <span class="sr">État du service :</span>
+    <span class="pastille" id="sante" role="status">santé : …</span>
+  </div>
+</header>
+
+<main>
+  <div class="avis" role="note">
+    <p><strong>Journal en mémoire, en lecture seule.</strong> Il garde les <strong id="capacite">N (100 par défaut)</strong> derniers échanges reçus sur <code>POST /a2a</code> par cette instance, et il est perdu au redémarrage ou à la mise en veille du service.</p>
+    <p>Les corps sont ceux du contrat v2.0 : 7 champs, sans donnée personnelle directe. L'en-tête <code>Authorization</code> et le jeton ne sont jamais consignés ; une requête sans jeton valide l'est sans son corps.</p>
+  </div>
+
+  <details class="carte-complete">
+    <summary>Agent Card complète (<code>/.well-known/agent.json</code>)</summary>
+    <pre id="carte-json" tabindex="0" aria-label="Agent Card au format JSON">chargement…</pre>
+  </details>
+
+  <form class="acces" id="acces" autocomplete="off" novalidate>
+    <label for="jeton">Jeton du partenaire (Bearer)</label>
+    <div class="champ">
+      <input id="jeton" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" aria-describedby="jeton-aide jeton-erreur">
+      <button class="bouton" type="submit">Afficher le journal</button>
+    </div>
+    <p class="aide" id="jeton-aide">Le même que <code>PARTENAIRE_JETON</code>. Gardé dans cet onglet seulement (<code>sessionStorage</code>) et envoyé uniquement à <code>/journal</code> de ce service.</p>
+    <p class="erreur" id="jeton-erreur" role="alert"></p>
+  </form>
+
+  <div id="connecte" hidden>
+    <div class="barre">
+      <button class="bouton" type="button" id="actualiser">Actualiser</button>
+      <label><input type="checkbox" id="auto" checked> Rafraîchir toutes les 3 s</label>
+      <span class="maj" id="maj"></span>
+      <div class="fin">
+        <span>Jeton gardé pour cet onglet.</span>
+        <button class="bouton second" type="button" id="oublier">Oublier le jeton</button>
+      </div>
+    </div>
+    <p class="sr" id="annonce" aria-live="polite"></p>
+
+    <div class="vue">
+      <section class="liste" aria-labelledby="journal-titre">
+        <div class="tete-liste">
+          <h2 id="journal-titre" tabindex="-1">Échanges, plus récents en premier</h2>
+          <small id="compte"></small>
+        </div>
+        <ul id="echanges" aria-labelledby="journal-titre"></ul>
+        <p class="vide" id="liste-vide" hidden>Aucun échange consigné depuis le démarrage de cette instance.</p>
+        <p class="raccourcis">Flèches haut et bas pour parcourir, Entrée pour afficher le détail.</p>
+      </section>
+
+      <section class="detail" id="detail" aria-labelledby="detail-titre">
+        <div class="fiche">
+          <div class="fiche-tete">
+            <h2 id="detail-titre" tabindex="-1">Détail</h2>
+            <span class="pastille" id="detail-issue" hidden></span>
+          </div>
+          <p class="message" id="detail-vide">Choisissez un échange dans la liste pour voir ce qui a été reçu et envoyé.</p>
+          <ul class="meta" id="detail-meta" hidden></ul>
+          <p class="message" id="detail-message" hidden></p>
+        </div>
+        <div class="paires" id="paires" hidden>
+          <figure>
+            <figcaption><span>Reçu <small>requête <code>POST /a2a</code></small></span><button class="bouton second petit" type="button" data-copier="recu-json" aria-label="Copier le corps reçu">Copier</button></figcaption>
+            <p class="note" id="recu-note" hidden></p>
+            <pre id="recu-json" tabindex="0" aria-label="Corps reçu"></pre>
+          </figure>
+          <figure>
+            <figcaption><span>Envoyé <small id="envoye-legende">réponse</small></span><button class="bouton second petit" type="button" data-copier="envoye-json" aria-label="Copier le corps envoyé">Copier</button></figcaption>
+            <p class="note" id="envoye-note" hidden></p>
+            <pre id="envoye-json" tabindex="0" aria-label="Corps envoyé"></pre>
+          </figure>
+        </div>
+      </section>
+    </div>
+  </div>
+  <noscript><p class="vide">Cette page a besoin de JavaScript pour lire le journal.</p></noscript>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const CLE = 'partenaire-jeton';
+  const PERIODE_MS = 3000;
+  const NIVEAUX = { faible: 'faible', modere: 'modéré', eleve: 'élevé' };
+  const JETONS_JSON = /("(?:\\.|[^"\\])*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+  const $ = (id) => document.getElementById(id);
+
+  let jetonMemoire = null; // repli si sessionStorage est indisponible
+  let entrees = [];
+  let capacite = null;
+  let choisi = null;
+  let affiche = null;
+  let signature = '';
+  let dernierNumero = null;
+  let charge = false;
+  let enCours = false;
+
+  // ---------------------------------------------------------------- jeton
+  function lireJeton() {
+    try { return sessionStorage.getItem(CLE) || jetonMemoire; } catch (e) { return jetonMemoire; }
+  }
+  function garderJeton(jeton) {
+    jetonMemoire = jeton;
+    try { sessionStorage.setItem(CLE, jeton); } catch (e) { /* mémoire de la page seulement */ }
+  }
+  function oublierJeton() {
+    jetonMemoire = null;
+    try { sessionStorage.removeItem(CLE); } catch (e) { /* rien à effacer */ }
+  }
+
+  // ---------------------------------------------------------------- outils
+  const nombre = (x, chiffres) => Number(x).toLocaleString('fr-FR', { maximumFractionDigits: chiffres });
+  const heure = (d) => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  function el(balise, classe, texte) {
+    const n = document.createElement(balise);
+    if (classe) n.className = classe;
+    if (texte !== undefined) n.textContent = texte;
+    return n;
+  }
+  function annoncer(texte) {
+    $('annonce').textContent = '';
+    window.setTimeout(() => { $('annonce').textContent = texte; }, 50);
+  }
+  function classeIssue(issue) {
+    return issue === 'succes' ? 'succes' : issue === 'erreur' ? 'erreur-rpc' : 'refus';
+  }
+  function libelleIssue(r) {
+    if (r.issue === 'succes') return (NIVEAUX[r.niveau] || r.niveau) + ' · ' + nombre(r.score, 2);
+    if (r.issue === 'erreur') return 'erreur ' + r.code;
+    return 'refus 401';
+  }
+  function colorer(pre, texte) {
+    const morceaux = document.createDocumentFragment();
+    let i = 0;
+    for (const m of texte.matchAll(JETONS_JSON)) {
+      if (m.index > i) morceaux.append(texte.slice(i, m.index));
+      if (m[1]) {
+        morceaux.append(el('span', m[2] ? 'j-cle' : 'j-chaine', m[1]));
+        if (m[2]) morceaux.append(m[2]);
+      } else {
+        morceaux.append(el('span', /^[tfn]/.test(m[0]) ? 'j-lit' : 'j-num', m[0]));
+      }
+      i = m.index + m[0].length;
+    }
+    morceaux.append(texte.slice(i));
+    pre.replaceChildren(morceaux);
+  }
+  function montrer(contenu, pre, note) {
+    if (contenu.format === 'json') {
+      note.hidden = true;
+      colorer(pre, JSON.stringify(contenu.corps, null, 2));
+    } else if (contenu.format === 'texte') {
+      note.hidden = false;
+      note.textContent = 'Pas du JSON consignable tel quel (illisible ou plus de 16 Kio) : extrait de '
+        + nombre(contenu.extrait.length) + ' caractères, sur ' + nombre(contenu.octets) + ' octets.';
+      pre.textContent = contenu.extrait;
+    } else {
+      note.hidden = false;
+      note.textContent = 'Corps non consigné : ' + contenu.motif + '.';
+      pre.textContent = '—';
+    }
+  }
+
+  // ---------------------------------------------------------------- en-tête
+  async function chargerCarte() {
+    try {
+      const r = await fetch('.well-known/agent.json', { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const carte = await r.json();
+      $('carte-resume').textContent = carte.name + ' · contrat v' + carte.version + ' · A2A '
+        + carte.protocolVersion + ' · ' + carte.preferredTransport + ' · ' + carte.url;
+      colorer($('carte-json'), JSON.stringify(carte, null, 2));
+    } catch (e) {
+      $('carte-resume').textContent = 'Agent Card illisible (' + e.message + ')';
+      $('carte-json').textContent = '—';
+    }
+  }
+  async function chargerSante() {
+    const pastille = $('sante');
+    try {
+      const r = await fetch('health', { cache: 'no-store' });
+      const sante = await r.json();
+      const ok = r.ok && sante.statut === 'ok';
+      pastille.className = 'pastille ' + (ok ? 'ok' : 'ko');
+      pastille.textContent = (ok ? 'en ligne' : 'statut ' + sante.statut) + ' · ' + sante.version_modele;
+    } catch (e) {
+      pastille.className = 'pastille ko';
+      pastille.textContent = 'injoignable';
+    }
+  }
+
+  // ---------------------------------------------------------------- accès
+  function afficherConnecte() {
+    $('acces').hidden = true;
+    $('connecte').hidden = false;
+    $('jeton-erreur').textContent = '';
+  }
+  function afficherDeconnecte(message) {
+    entrees = []; signature = ''; choisi = null; affiche = null; dernierNumero = null; charge = false;
+    $('echanges').replaceChildren();
+    $('connecte').hidden = true;
+    $('acces').hidden = false;
+    $('jeton-erreur').textContent = message || '';
+    $('jeton').focus();
+  }
+
+  // ---------------------------------------------------------------- journal
+  async function charger(manuel) {
+    const jeton = lireJeton();
+    if (!jeton || enCours) return;
+    enCours = true;
+    $('echanges').setAttribute('aria-busy', 'true');
+    try {
+      const r = await fetch('journal', { headers: { Authorization: 'Bearer ' + jeton }, cache: 'no-store' });
+      if (r.status === 401) {
+        oublierJeton();
+        afficherDeconnecte('Jeton refusé par le service : saisissez-le de nouveau.');
+        return;
+      }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      recevoir(await r.json(), manuel);
+      $('maj').textContent = 'Mis à jour à ' + heure(new Date());
+    } catch (e) {
+      $('maj').textContent = 'Échec de la mise à jour (' + e.message + ') à ' + heure(new Date());
+    } finally {
+      enCours = false;
+      $('echanges').removeAttribute('aria-busy');
+    }
+    chargerSante();
+  }
+
+  function recevoir(donnees, manuel) {
+    capacite = donnees.capacite;
+    $('capacite').textContent = String(capacite);
+    const recus = donnees.entrees;
+    const plusRecent = recus.length ? recus[0].numero : null;
+    if (!charge) {
+      annoncer(recus.length + (recus.length > 1 ? ' échanges' : ' échange') + ' dans le journal.');
+    } else if (plusRecent !== null && dernierNumero !== null && plusRecent < dernierNumero) {
+      choisi = null; affiche = null; // numérotation repartie de 1 : l'instance a redémarré
+      annoncer('Le service a redémarré : le journal est reparti de zéro.');
+    } else {
+      const nouveaux = recus.filter((e) => dernierNumero === null || e.numero > dernierNumero).length;
+      if (nouveaux) annoncer(nouveaux === 1 ? '1 nouvel échange.' : nouveaux + ' nouveaux échanges.');
+      else if (manuel) annoncer('Journal actualisé, aucun nouvel échange.');
+    }
+    charge = true;
+    if (plusRecent !== null) dernierNumero = plusRecent;
+    entrees = recus;
+    if (choisi === null && entrees.length) choisi = entrees[0].numero;
+    const nouvelle = entrees.map((e) => e.numero + '|' + e.horodatage).join(',');
+    if (nouvelle !== signature) {
+      signature = nouvelle;
+      rendreListe();
+    }
+    rendreDetail();
+  }
+
+  function rendreListe() {
+    const ul = $('echanges');
+    const actif = document.activeElement;
+    const focalise = actif && actif.classList && actif.classList.contains('echange') ? actif.dataset.numero : null;
+    ul.replaceChildren(...entrees.map(ligne));
+    $('liste-vide').hidden = entrees.length > 0;
+    ul.hidden = entrees.length === 0;
+    $('compte').textContent = entrees.length + ' sur ' + capacite;
+    if (focalise) {
+      const bouton = ul.querySelector('[data-numero="' + focalise + '"]');
+      if (bouton) bouton.focus();
+    }
+  }
+
+  function ligne(e) {
+    const r = e.resume;
+    const bouton = el('button', 'echange ' + classeIssue(r.issue));
+    bouton.type = 'button';
+    bouton.dataset.numero = String(e.numero);
+    bouton.setAttribute('aria-current', String(e.numero === choisi));
+    bouton.append(
+      el('span', 'num', 'n° ' + e.numero),
+      el('span', 'heure', heure(new Date(e.horodatage))),
+      el('span', 'http', 'HTTP ' + e.statut_http),
+      el('span', 'dossier', r.dossier || (r.issue === 'refus' ? 'sans jeton valide' : 'sans dossier')),
+      el('span', 'issue', libelleIssue(r)),
+    );
+    const li = el('li');
+    li.append(bouton);
+    return li;
+  }
+
+  function choisir(numero, deplacer) {
+    choisi = numero;
+    for (const b of $('echanges').querySelectorAll('.echange')) {
+      b.setAttribute('aria-current', String(Number(b.dataset.numero) === numero));
+    }
+    rendreDetail();
+    if (deplacer && window.matchMedia('(max-width: 1000px)').matches) {
+      $('detail').scrollIntoView({ block: 'start' });
+      $('detail-titre').focus({ preventScroll: true });
+    }
+  }
+
+  function rendreDetail() {
+    const e = entrees.find((x) => x.numero === choisi);
+    if (!e) {
+      affiche = null;
+      $('detail-titre').textContent = 'Détail';
+      $('detail-issue').hidden = true;
+      $('detail-meta').hidden = true;
+      $('detail-message').hidden = true;
+      $('paires').hidden = true;
+      $('detail-vide').hidden = false;
+      $('detail-vide').textContent = choisi === null
+        ? 'Choisissez un échange dans la liste pour voir ce qui a été reçu et envoyé.'
+        : 'L\'échange n° ' + choisi + ' n\'est plus dans le journal : seuls les ' + capacite
+          + ' derniers sont gardés, et tout est perdu au redémarrage.';
+      return;
+    }
+    const cle = e.numero + '|' + e.horodatage;
+    if (affiche === cle) return; // un échange consigné ne change plus
+    affiche = cle;
+    const r = e.resume;
+    $('detail-vide').hidden = true;
+    $('detail-titre').textContent = 'Échange n° ' + e.numero;
+    const issue = $('detail-issue');
+    issue.hidden = false;
+    issue.className = 'pastille ' + (r.issue === 'succes' ? 'ok' : r.issue === 'erreur' ? 'ko' : 'esc');
+    issue.textContent = libelleIssue(r);
+
+    const quand = new Date(e.horodatage);
+    const meta = [
+      ['reçu à ', heure(quand) + ' (' + e.horodatage + ')'],
+      ['traité en ', nombre(e.duree_ms, 2) + ' ms'],
+      ['statut ', 'HTTP ' + e.statut_http],
+      ['méthode ', r.methode || '—'],
+      ['dossier ', r.dossier || '—'],
+    ].map(([etiquette, valeur]) => {
+      const li = el('li', '', etiquette);
+      li.append(el('b', '', valeur));
+      return li;
+    });
+    $('detail-meta').replaceChildren(...meta);
+    $('detail-meta').hidden = false;
+
+    const message = $('detail-message');
+    message.hidden = false;
+    if (r.issue === 'succes') {
+      message.textContent = 'Avis rendu : niveau ' + (NIVEAUX[r.niveau] || r.niveau) + ', score ' + nombre(r.score, 2) + '.';
+    } else if (r.issue === 'erreur') {
+      message.textContent = 'Erreur JSON-RPC ' + r.code + ' : ' + r.message + '.';
+    } else {
+      message.textContent = 'Requête refusée (HTTP 401) : ' + r.message + '. Son corps n\'est pas consigné.';
+    }
+
+    $('envoye-legende').textContent = 'réponse HTTP ' + e.statut_http;
+    montrer(e.recu, $('recu-json'), $('recu-note'));
+    montrer(e.envoye, $('envoye-json'), $('envoye-note'));
+    $('paires').hidden = false;
+  }
+
+  // ---------------------------------------------------------------- événements
+  $('acces').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const jeton = $('jeton').value.trim();
+    if (!jeton) {
+      $('jeton-erreur').textContent = 'Saisissez le jeton.';
+      $('jeton').focus();
+      return;
+    }
+    garderJeton(jeton);
+    $('jeton').value = '';
+    afficherConnecte();
+    $('journal-titre').focus();
+    charger(true);
+  });
+
+  $('oublier').addEventListener('click', () => {
+    oublierJeton();
+    afficherDeconnecte('');
+  });
+
+  $('actualiser').addEventListener('click', () => charger(true));
+
+  $('echanges').addEventListener('click', (ev) => {
+    const bouton = ev.target.closest('.echange');
+    if (bouton) choisir(Number(bouton.dataset.numero), true);
+  });
+
+  $('echanges').addEventListener('keydown', (ev) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(ev.key)) return;
+    const boutons = [...$('echanges').querySelectorAll('.echange')];
+    const i = boutons.indexOf(document.activeElement);
+    if (i < 0) return;
+    ev.preventDefault();
+    const j = ev.key === 'Home' ? 0
+      : ev.key === 'End' ? boutons.length - 1
+      : Math.min(boutons.length - 1, Math.max(0, i + (ev.key === 'ArrowDown' ? 1 : -1)));
+    boutons[j].focus();
+  });
+
+  document.addEventListener('click', async (ev) => {
+    const bouton = ev.target.closest('[data-copier]');
+    if (!bouton) return;
+    try {
+      await navigator.clipboard.writeText($(bouton.dataset.copier).textContent);
+      bouton.textContent = 'Copié';
+    } catch (e) {
+      bouton.textContent = 'Copie impossible';
+    }
+    window.setTimeout(() => { bouton.textContent = 'Copier'; }, 1500);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && $('auto').checked) charger(false);
+  });
+
+  window.setInterval(() => {
+    if ($('auto').checked && !document.hidden && lireJeton()) charger(false);
+  }, PERIODE_MS);
+
+  chargerCarte();
+  chargerSante();
+  if (lireJeton()) {
+    afficherConnecte();
+    charger(false);
+  }
+})();
+</script>
+</body>
+</html>

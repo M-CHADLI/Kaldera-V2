@@ -267,8 +267,8 @@
     ["src/kaldera/partenaire.py"]);
 
   b("part", null, "ext", 1700, 380, 660, 590, "Partenaire anti-fraude", "Cloud Run · notre service A2A", [], [],
-    "<p>Notre propre partenaire anti-fraude, conforme au contrat v2.0, déployé sur Cloud Run. <b>Aucune route de simulation</b> n'y est exposée.</p><p>Une seule instance : son registre « un appel par dossier » vit en mémoire.</p>",
-    ["partenaire_antifraude/app.py", "scripts/deployer_partenaire.sh"], { reveal: 1.2 });
+    "<p>Notre propre partenaire anti-fraude, conforme au contrat v2.0, déployé sur Cloud Run. <b>Aucune route de simulation</b> n'y est exposée.</p><p>Une seule instance : son registre « un appel par dossier » vit en mémoire.</p><p>Un <b>journal</b> des derniers échanges montre ce qu'il reçoit et ce qu'il renvoie : <b>GET /journal</b>, protégé par le même jeton, et sa page de consultation à la racine du service. En mémoire, borné, jamais d'en-tête ni de jeton consigné.</p>",
+    ["partenaire_antifraude/app.py", "partenaire_antifraude/journal.html", "scripts/deployer_partenaire.sh"], { reveal: 1.2 });
   b("card", "part", "plain", 1730, 495, 600, 85, "Agent Card", "GET /.well-known/agent.json", [], [],
     "<p>La carte d'identité de l'agent : son nom, ses compétences (évaluer le risque) et son schéma d'authentification (jeton Bearer).</p>", ["partenaire_antifraude/app.py"]);
   b("a2a", "part", "plain", 1730, 600, 600, 95, "Endpoint A2A", "POST /a2a · message/send",
@@ -340,9 +340,9 @@
     { k: "Chantier 2 · mode dégradé", t: "Partenaire en panne : un vrai plan B", f: ["client", "decision"], ex: ["E5"],
       x: "Sans avis, une demande jusqu'à 1 500 € continue et le rapport le signale ; au-delà, elle part à la cellule anti-fraude. Un disjoncteur évite d'insister pendant un lot." },
     { k: "Chantier 2 · partenaire", t: "Mon propre partenaire, sur Cloud Run", f: ["part"], ex: ["E3", "E4"],
-      x: "Conforme au contrat v2.0, sans route de simulation, avec un score explicable par règles. Il refuse tout champ en trop et tout second appel pour un même dossier." },
+      x: "Conforme au contrat v2.0, sans route de simulation, avec un score explicable par règles. Il refuse tout champ en trop et tout second appel pour un même dossier. Un journal protégé montre ce qu'il reçoit et renvoie." },
     { k: "Chantier 2 · épreuve", t: "Éprouvé, mesuré, consigné", f: ["ci"], ex: ["E6"],
-      x: "28 scénarios rejoués 3 fois : 28 conformes sur 28. Latence, échecs et appels externes mesurés par agent. 13 ajustements au journal. 479 tests, 98,77 % de couverture ; la CI bloque sous 85 %." },
+      x: "28 scénarios rejoués 3 fois : 28 conformes sur 28. Latence, échecs et appels externes mesurés par agent. 13 ajustements au journal. 510 tests, 98,77 % de couverture ; la CI bloque sous 85 %." },
     { k: "Les plus", t: "Un second regard, sans pouvoir de décision", f: ["revue", "hist"], ex: [],
       x: "La revue de fond signale une incohérence sans jamais modifier une valeur. L'historique ne garde que des données neutralisées : identifiant pseudonymisé, aucun texte libre." },
     { k: "Limites et suite", t: "Ce qui reste à faire", f: null, ex: [],

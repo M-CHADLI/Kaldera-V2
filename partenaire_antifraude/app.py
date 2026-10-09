@@ -1,24 +1,32 @@
 """Partenaire anti-fraude Kaldera — service A2A conforme au contrat v2.0 (external_agent/contrat.md).
 
-Uniquement les routes du contrat (Agent Card, ``message/send``), plus ``/health`` proposé en
-v2.1. Aucune route de simulation : ce service est fait pour être exposé.
+Les routes du contrat (Agent Card, ``message/send``), plus ``/health`` proposé en v2.1, et un
+journal des derniers échanges sur ``/a2a``, en lecture seule : ``GET /journal`` (même jeton)
+et sa page de consultation ``GET /``. Aucune route de simulation : ce service est fait pour
+être exposé.
 
     uvicorn partenaire_antifraude.app:app --port 8200
 """
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import hmac
+import itertools
 import json
 import os
 import re
 import threading
+import time
 import uuid
-from datetime import date
-from typing import Any
+from collections import deque
+from datetime import UTC, date, datetime
+from pathlib import Path
+from typing import Any, NoReturn
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 VERSION_MODELE = "kaldera-af-1.0.0"
 TYPES_SINISTRE = ("degat_des_eaux", "incendie", "bris_de_glace", "vol")
@@ -35,9 +43,31 @@ REGLES = (
 )
 SCORE_DE_BASE, SCORE_MAX = 0.06, 0.97
 
+# Journal des échanges : en mémoire seulement, borné, perdu au redémarrage.
+JOURNAL_MAX_DEFAUT, JOURNAL_MAX_PLAFOND = 100, 1000
+CORPS_MAX = 16_384  # octets : au-delà, un corps n'est consigné que par un extrait
+EXTRAIT_MAX = 2_000  # caractères gardés d'un corps qui n'est pas consigné tel quel
+PROFONDEUR_MAX = 64  # imbrication au-delà de laquelle un corps est jugé illisible
+REFUS = {"detail": "jeton absent ou invalide"}
+PAGE = Path(__file__).with_name("journal.html")
+
+
+def taille_journal() -> int:
+    """Échanges gardés : ``PARTENAIRE_JOURNAL_MAX``, ramené entre 1 et 1 000 (100 par défaut)."""
+    try:
+        taille = int(os.environ.get("PARTENAIRE_JOURNAL_MAX", JOURNAL_MAX_DEFAUT))
+    except ValueError:
+        return JOURNAL_MAX_DEFAUT
+    return min(max(taille, 1), JOURNAL_MAX_PLAFOND)
+
+
 app = FastAPI(title="Partenaire anti-fraude Kaldera", version="2.0")
 _evalues: set[str] = set()
 _verrou = threading.Lock()
+_journal: deque[dict[str, Any]] = deque(maxlen=taille_journal())
+_numeros = itertools.count(1)
+_verrou_journal = threading.Lock()
+_page = PAGE.read_text(encoding="utf-8")
 
 
 # ------------------------------------------------------------------- routes
@@ -76,11 +106,43 @@ def sante() -> dict[str, str]:
 
 @app.post("/a2a")
 async def a2a(request: Request) -> Any:
-    jeton = os.environ.get("PARTENAIRE_JETON", "")
-    if not jeton or request.headers.get("authorization") != f"Bearer {jeton}":
-        return JSONResponse({"detail": "jeton absent ou invalide"}, status_code=401)
+    debut = time.perf_counter()
+    if not _autorise(request):
+        # Consignée sans son corps : sans jeton, personne ne remplit le journal de contenu.
+        _consigner(debut, 401, {"format": "non_consigne", "motif": REFUS["detail"]}, REFUS)
+        return JSONResponse(REFUS, status_code=401)
+    corps = await request.body()
+    reponse = _repondre(corps)
+    _consigner(debut, 200, _contenu(corps), reponse)
+    return reponse
+
+
+@app.get("/journal")
+def journal(request: Request) -> JSONResponse:
+    """Derniers échanges sur ``/a2a``, plus récents en premier. Lecture seule, même jeton."""
+    if not _autorise(request):
+        return JSONResponse(REFUS, status_code=401)
+    with _verrou_journal:
+        entrees = list(reversed(_journal))
+    return JSONResponse(
+        {"capacite": _journal.maxlen, "nombre": len(entrees), "entrees": entrees},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def page_journal() -> HTMLResponse:
+    """Page de consultation du journal ; elle n'affiche aucun échange sans le jeton."""
+    return HTMLResponse(_page, headers=_entetes_page(_page))
+
+
+# ------------------------------------------------------------------- logique
+
+
+def _repondre(corps: bytes) -> dict[str, Any]:
+    """Réponse JSON-RPC à un appel authentifié."""
     try:
-        enveloppe = json.loads(await request.body())
+        enveloppe = _lire_json(corps)
     except ValueError:
         return _erreur(None, -32700, "corps illisible")
     if (
@@ -110,9 +172,6 @@ async def a2a(request: Request) -> Any:
             )
         _evalues.add(donnees["reference_dossier"])
     return _tache(id_rpc, evaluer(donnees))
-
-
-# ------------------------------------------------------------------- logique
 
 
 def evaluer(donnees: dict[str, Any]) -> dict[str, Any]:
@@ -150,6 +209,41 @@ def valider(donnees: dict[str, Any]) -> dict[str, list[str]]:
             c for c, ok in attendus.items() if c in donnees and not ok(donnees[c])
         ),
     }
+
+
+def _autorise(request: Request) -> bool:
+    """Jeton Bearer de ``PARTENAIRE_JETON``, comparé à temps constant."""
+    jeton = os.environ.get("PARTENAIRE_JETON", "")
+    fourni = request.headers.get("authorization", "")
+    return bool(jeton) and hmac.compare_digest(fourni.encode(), f"Bearer {jeton}".encode())
+
+
+def _lire_json(brut: bytes) -> Any:
+    """JSON strict : ni NaN ni Infinity, imbrication bornée ; sinon ValueError."""
+    try:
+        valeur = json.loads(brut, parse_constant=_refuser_constante)
+    except RecursionError as exc:
+        raise ValueError("imbrication trop profonde") from exc
+    if _profondeur(valeur) > PROFONDEUR_MAX:
+        raise ValueError("imbrication trop profonde")
+    return valeur
+
+
+def _refuser_constante(nom: str) -> NoReturn:
+    raise ValueError(f"{nom} n'est pas du JSON")
+
+
+def _profondeur(valeur: Any) -> int:
+    """Profondeur d'imbrication d'une valeur JSON, calculée sans récursion."""
+    pile, profondeur = [(valeur, 0)], 0
+    while pile:
+        v, p = pile.pop()
+        profondeur = max(profondeur, p)
+        if isinstance(v, dict):
+            pile.extend((e, p + 1) for e in v.values())
+        elif isinstance(v, list):
+            pile.extend((e, p + 1) for e in v)
+    return profondeur
 
 
 def _extraire(params: Any) -> dict[str, Any] | None:
@@ -198,3 +292,85 @@ def _date(v: Any) -> bool:
         return isinstance(v, str) and date.fromisoformat(v).isoformat() == v
     except ValueError:
         return False
+
+
+# ------------------------------------------------------------------- journal
+
+
+def _consigner(debut: float, statut: int, recu: dict[str, Any], envoye: dict[str, Any]) -> None:
+    """Ajoute un échange au journal. Aucun en-tête, donc jamais le jeton, n'y est consigné."""
+    duree_ms = round((time.perf_counter() - debut) * 1000, 2)
+    entree = {
+        "horodatage": datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+        "duree_ms": duree_ms,
+        "statut_http": statut,
+        "resume": _resume(statut, recu, envoye),
+        "recu": recu,
+        "envoye": _contenu(json.dumps(envoye, ensure_ascii=False).encode()),
+    }
+    with _verrou_journal:
+        _journal.append({"numero": next(_numeros), **entree})
+
+
+def _contenu(brut: bytes) -> dict[str, Any]:
+    """Corps consigné : le JSON tel quel s'il est de taille raisonnable, sinon un extrait."""
+    if len(brut) <= CORPS_MAX:
+        try:
+            return {"format": "json", "corps": _lire_json(brut)}
+        except ValueError:
+            pass
+    extrait = brut[: 4 * EXTRAIT_MAX].decode("utf-8", errors="replace")[:EXTRAIT_MAX]
+    return {"format": "texte", "extrait": extrait, "octets": len(brut)}
+
+
+def _resume(statut: int, recu: dict[str, Any], envoye: dict[str, Any]) -> dict[str, Any]:
+    """L'essentiel d'un échange : méthode, dossier, puis l'avis rendu ou l'erreur."""
+    corps = recu.get("corps")
+    requete: dict[str, Any] = corps if isinstance(corps, dict) else {}
+    donnees = _extraire(requete.get("params")) or {}
+    resume = {
+        "methode": _court(requete.get("method")),
+        "dossier": _court(donnees.get("reference_dossier")),
+    }
+    if statut != 200:
+        return {**resume, "issue": "refus", "message": REFUS["detail"]}
+    if "error" in envoye:
+        erreur = envoye["error"]
+        return {**resume, "issue": "erreur", "code": erreur["code"], "message": erreur["message"]}
+    evaluation = envoye["result"]["artifacts"][0]["parts"][0]["data"]
+    return {
+        **resume,
+        "issue": "succes",
+        "niveau": evaluation["niveau"],
+        "score": evaluation["score"],
+    }
+
+
+def _court(valeur: Any) -> str | None:
+    return valeur[:80] if isinstance(valeur, str) else None
+
+
+def _entetes_page(page: str) -> dict[str, str]:
+    """En-têtes de la page : seul son propre script s'exécute, et il n'appelle que ce service."""
+    empreintes = " ".join(
+        f"'sha256-{base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()}'"
+        for script in re.findall(r"<script>(.*?)</script>", page, re.S)
+    )
+    politique = "; ".join(
+        [
+            "default-src 'none'",
+            f"script-src {empreintes}",
+            "connect-src 'self'",
+            "style-src 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src https://fonts.gstatic.com",
+            "img-src data:",
+            "base-uri 'none'",
+            "form-action 'none'",
+            "frame-ancestors 'none'",
+        ]
+    )
+    return {
+        "Content-Security-Policy": politique,
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+    }

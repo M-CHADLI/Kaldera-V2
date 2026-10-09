@@ -25,6 +25,10 @@ motivée, expliquée dans un rapport, même quand le partenaire est lent, menteu
   pseudonymisé par HMAC.
 - Notre propre partenaire anti-fraude (`partenaire_antifraude/`), conforme au contrat
   v2.0, sans routes de simulation, avec un score explicable par règles.
+- Journal des échanges du partenaire : ce qu'il reçoit et ce qu'il envoie sur `/a2a`, lisible
+  en JSON (`GET /journal`, même jeton Bearer) ou dans sa page (`GET /`). Lecture seule, en mémoire,
+  limité aux `PARTENAIRE_JOURNAL_MAX` derniers échanges et perdu au redémarrage ; ni le jeton
+  ni les en-têtes ne sont consignés.
 - Analyse de dossier : le contrat, la déclaration, les factures, les photos et le dépôt de plainte
   sont importés pièce par pièce (ou en un seul PDF) ; un agent d'extraction produit la demande
   au format du §3 et une fiche à valider avant tout traitement. Rien n'est conservé. Une photo est exigée
@@ -64,6 +68,7 @@ Toutes sont listées dans [`.env.example`](.env.example). Aucune n'est nécessai
 |---|---|---|
 | `PARTENAIRE_URL` | URL de base du partenaire anti-fraude | `http://localhost:8100` |
 | `PARTENAIRE_JETON` | Jeton Bearer du partenaire (lu par le client, le simulateur et notre partenaire) | vide |
+| `PARTENAIRE_JOURNAL_MAX` | Nombre d'échanges gardés par le journal de notre partenaire (en mémoire), ramené entre 1 et 1 000 | `100` |
 | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME`, `AZURE_OPENAI_API_VERSION` | Modèle de langage (Azure OpenAI, gpt-5.4-mini), utilisé par la revue `llm` et l'extraction `llm` ou `auto` ; la version d'API est ignorée avec un endpoint `/openai/v1` | vides |
 | `KALDERA_LLM_DELAI_S` | Délai maximal d'un appel au modèle, en secondes | `60` |
 | `KALDERA_REVUE` | Revue de fond : `regles`, `aucune`, `llm` ou `system_one` | `regles` |
@@ -98,6 +103,9 @@ uv run uvicorn partenaire_antifraude.app:app --port 8200
 make web PARTENAIRE_URL=http://localhost:8200     # dans un autre terminal : console branchée dessus
 ```
 
+Son journal des échanges se lit sur http://localhost:8200/ : la page demande le jeton avant
+d'afficher quoi que ce soit.
+
 ## Déploiement (Google Cloud Run)
 
 Déployé le 9 octobre 2026, projet `project-dcb41d07-e852-4bf6-85f`, région `europe-west9`,
@@ -118,7 +126,9 @@ PROJET=<id-du-projet> PARTENAIRE_URL=<url> PARTENAIRE_JETON=<jeton> ./scripts/de
   service de Cloud Build n'a pas les droits nécessaires.
 - `deployer_partenaire.sh` génère un jeton s'il n'est pas fourni et l'affiche à la fin ;
   il le passe au service en variable d'environnement. Ne le versionnez pas.
-- Le partenaire tourne avec `--max-instances 1` : son registre anti-doublon vit en mémoire.
+- Le partenaire tourne avec `--max-instances 1` : son registre anti-doublon et son journal
+  des échanges vivent en mémoire. Le journal se lit à la racine de son URL, avec le jeton ; il
+  est perdu à chaque redémarrage, redéploiement ou mise en veille.
 - Face au partenaire réel, la console refuse de forcer une panne (HTTP 409) ; un second
   rejeu du même scénario déclenche le doublon `-32029`, donc le mode dégradé.
 
@@ -139,11 +149,11 @@ Détails et limites : [docs/conception/3-a2a-mode-degrade.md](docs/conception/3-
 - `src/kaldera/web.py`, `console.html` — console web
 - `exemples/` — dossier PDF et pièces d'exemple (données fictives) ; `scripts/exemple_dossier_pdf.py` les génère
 - `exemples/cas/` — 15 dossiers de pièces pour le test de bout en bout, en deux variantes (`A-etiquete`, `B-libre`), avec le résultat attendu de chacun ; `scripts/generer_cas_exemples.py` les génère
-- `partenaire_antifraude/` — notre partenaire anti-fraude, déployable sur Cloud Run
+- `partenaire_antifraude/` — notre partenaire anti-fraude, déployable sur Cloud Run ; `journal.html` — page de son journal des échanges
 - `external_agent/` — service anti-fraude partenaire simulé et son contrat (`contrat.md`)
 - `eval/scenarios.jsonl` — scénarios de recette ; `scripts/epreuve.py` — banc d'épreuve
 - `scripts/deployer_partenaire.sh`, `deployer_console.sh` — déploiement Cloud Run ; `partner_ctl.py` — pilotage du simulateur
-- `tests/acceptance/` — suite d'acceptance fournie (56 tests) ; `tests/unit/` — tests unitaires (423)
+- `tests/acceptance/` — suite d'acceptance fournie (56 tests) ; `tests/unit/` — tests unitaires (454)
 - `docs/conception/` — dossier de conception ; `docs/journal-ajustements.md` — journal
 - `docs/epreuve-resultats.md` — dernière épreuve ; `docs/preuves-execution.md` — preuve d'exécution
 
