@@ -153,10 +153,15 @@
     "<p>Le service Kaldera, déployé sur Cloud Run. Il porte l'interface web et le moteur d'équipe, et appelle le partenaire en A2A.</p><p>Il détecte si le partenaire est <b>simulé</b> ou <b>réel</b> et refuse de forcer une panne sur le service réel.</p>",
     ["src/kaldera/web.py", "Dockerfile", "scripts/deployer_console.sh"], { reveal: 1.2 });
 
-  b("web", "console", "plain", 480, 215, 1020, 110, "Interface web", "FastAPI · console.html",
-    ["Rejouer, régler le partenaire simulé, lire fiches, rapports, traces et métriques"], [],
-    "<p>Console FastAPI : liste des 28 scénarios, rejeu contre le partenaire, réglage du mode du partenaire simulé, fiches, rapports, traces et métriques par agent. Une demande peut aussi être soumise en JSON.</p>",
+  b("web", "console", "plain", 480, 215, 500, 110, "Interface web", "FastAPI · console.html",
+    ["Importer les pièces, rejouer, lire", "fiches, rapports et métriques"], [],
+    "<p>Console FastAPI : des boutons importent les pièces du dossier (contrat, déclaration, factures, photos, plainte) ; la liste des 28 scénarios de test est repliée. Rejeu contre le partenaire, réglage du partenaire simulé, fiches, rapports, traces et métriques par agent. Une demande peut aussi être soumise en JSON.</p>",
     ["src/kaldera/web.py", "src/kaldera/console.html"]);
+
+  b("extraction", "console", "core", 1000, 215, 500, 110, "Analyse de dossier", "pièces → demande à valider",
+    ["PDF et photos lus, rien conservé", "une fiche à relire avant traitement"], ["champs, ou gpt-5.4-mini (facultatif)"],
+    "<p>Transforme les pièces importées (contrat, déclaration, factures, photos, dépôt de plainte, ou un dossier complet en un PDF) en demande au format du §3, plus une <b>fiche à valider</b> avant tout traitement.</p><p>Deux extracteurs derrière une <b>seule validation</b> : la lecture par champs, déterministe (défaut), ou le modèle gpt-5.4-mini, facultatif (<b>KALDERA_EXTRACTION</b>). Le contenu du PDF est une donnée, jamais une consigne ; champ obligatoire absent ou illisible : le traitement est bloqué.</p>",
+    ["src/kaldera/extraction.py", "exemples/"]);
 
   b("moteur", "console", "plain", 480, 350, 1020, 540, "Moteur d'équipe", "superviseur-décideur · ordre fixe", [], [],
     "<p>L'équipe d'agents. Le superviseur-décideur appelle les agents dans un ordre fixe, s'arrête dès qu'une règle du §10 conclut, et est le seul à écrire l'état.</p><p>Chaque demande finit par une décision ou une escalade motivée, jamais par un silence (E1).</p>",
@@ -208,7 +213,7 @@
     ["src/kaldera/rapport.py"]);
 
   b("revue", "console", "opt", 480, 915, 330, 150, "Revue de fond", "signal seul",
-    ["règles par défaut, ou LLM,", "ou System One (hypothèse)"], ["ne modifie jamais une valeur"],
+    ["règles (défaut), gpt-5.4-mini", "ou System One (hypothèse)"], ["ne modifie jamais une valeur"],
     "<p>Second regard <b>facultatif</b>, choisi par <b>KALDERA_REVUE</b> : regles (défaut), aucune, llm ou system_one.</p><p>Elle signale, ne décide pas : en cas de désaccord, le sous-agent a raison. Le signal va dans la trace, les métriques et le rapport.</p>",
     ["src/kaldera/revue.py"]);
   b("hist", "console", "opt", 830, 915, 340, 150, "Historique", "données neutralisées",
