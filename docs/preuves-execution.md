@@ -31,7 +31,7 @@ cd /tmp/avant && "<dépôt>/.venv/Scripts/python" -m pytest tests/acceptance -q 
 |---|---|
 | [tests/acceptance/test_collaboration_a2a.py](../tests/acceptance/test_collaboration_a2a.py) | 16 |
 | [tests/acceptance/test_equipe_orchestration.py](../tests/acceptance/test_equipe_orchestration.py) | 40 |
-| [tests/unit/test_equipe.py](../tests/unit/test_equipe.py) | 29 |
+| [tests/unit/test_equipe.py](../tests/unit/test_equipe.py) | 31 |
 | [tests/unit/test_historique.py](../tests/unit/test_historique.py) | 12 |
 | [tests/unit/test_interfaces.py](../tests/unit/test_interfaces.py) | 23 |
 | [tests/unit/test_partenaire.py](../tests/unit/test_partenaire.py) | 33 |
@@ -77,7 +77,7 @@ Aucun service externe n'est requis : les tests et le banc lancent leur propre pa
 
 Le workflow [ci.yml](../.github/workflows/ci.yml) lance à chaque push la qualité, les tests avec la couverture, le banc d'épreuve et un déploiement de test Docker Compose. Il dépose les preuves en artefact `preuves-execution` (`coverage.xml`, `rapport-tests.xml`, `epreuve-resultats.md`).
 
-Dernier run vert : [run 37771464271](https://github.com/M-CHADLI/Kaldera-V2/actions/runs/37771464271), le 8 octobre 2026, sur le commit `cba9881`. Les trois jobs sont verts. **Ce run précède** la revue de fond, l'historique neutralisé et notre partenaire maison : il comptait 129 tests, une couverture de 98,58 % et 28 / 28 scénarios conformes. Les chiffres de cette page sont ceux de l'arbre de travail du 9 octobre ; la CI les mesurera au prochain push.
+Dernier run vert : [run 37917040867](https://github.com/M-CHADLI/Kaldera-V2/actions/runs/37917040867), le 9 octobre 2026, sur le commit `019dcf9`. Les trois jobs sont verts (qualité, tests avec couverture, déploiement de test) : 477 tests et 98,76 % de couverture. **Ce run précède** le changement sur les photos (contenu jamais jugé) : les chiffres de cette page (479 tests, 98,77 %) sont ceux de l'arbre de travail du 9 octobre, et la CI les mesurera au prochain push.
 
 ## Environnement Google Cloud
 

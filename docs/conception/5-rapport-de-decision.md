@@ -12,7 +12,7 @@ La fiche de décision ([§11](../specs_metier.md#L196-L209)) donne l'issue et un
 |---|---|---|
 | Issue | Décision ou escalade, montant, file, motif, mode dégradé | Superviseur-décideur |
 | Éligibilité | Résultat, et la condition du §4 qui a échoué s'il y en a une | Éligibilité |
-| Pièces | Pièces complètes ou manquantes, factures lisibles, nombre de compléments demandés | Pièces |
+| Pièces | Pièces complètes ou manquantes, factures lisibles, nombre de compléments demandés, et les pièces dont le contenu n'est pas analysé (la photo) | Pièces |
 | Montant | Le calcul complet : déclaré, justifié, retenu, franchise, **plafond s'il s'applique, avec le rappel de la règle** | Estimation |
 | Anti-fraude | Indicateurs F1 à F4 relevés, statut de l'avis (niveau, score, `evaluation_id`), couche de validation qui a échoué le cas échéant | Anti-fraude |
 | Règle du §10 | Le numéro de la règle qui a fixé l'issue, ou « interruption » | Superviseur-décideur |
@@ -40,6 +40,7 @@ Issue : décision · ACCEPTÉE · 3 000,00 €
 
 1. Éligibilité — éligible : les 5 conditions du §4 sont remplies.
 2. Pièces — complètes ; factures lisibles : 4 200,00 € (§5).
+   photo : reçue(s), contenu non analysé par le système — à examiner par un gestionnaire ou un expert.
 3. Montant (§6) — déclaré 4 200,00 € · justifié 4 200,00 € · retenu 4 200,00 €
    franchise de la formule essentiel : − 300,00 €   →   3 900,00 €
    PLAFOND APPLIQUÉ : la formule rembourse au plus 3 000,00 € par sinistre (§4).
@@ -62,6 +63,7 @@ Issue : décision · ACCEPTÉE · 1 050,00 € · MODE DÉGRADÉ
 
 1. Éligibilité — éligible : les 5 conditions du §4 sont remplies.
 2. Pièces — complètes ; factures lisibles : 1 200,00 € (§5).
+   photo : reçue(s), contenu non analysé par le système — à examiner par un gestionnaire ou un expert.
 3. Montant (§6) — déclaré 1 200,00 € · justifié 1 200,00 € · retenu 1 200,00 €
    franchise de la formule confort : − 150,00 €   →   1 050,00 €
    montant estimé : 1 050,00 €

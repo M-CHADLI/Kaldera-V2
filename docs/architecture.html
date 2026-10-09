@@ -144,9 +144,9 @@
     BL.push(o);
   }
 
-  b("users", null, "user", 40, 520, 300, 220, "Utilisateurs", "assuré · gestionnaire",
-    ["Assuré : reçoit son rapport", "Gestionnaire : reprend les", "escalades, examine les photos", "Expert : contrôle les faits"], ["Formateur : démo en direct"],
-    "<p>Quatre publics. L'assuré reçoit la version courte du rapport, sans le détail anti-fraude. Le gestionnaire reprend les dossiers escaladés (files <b>gestionnaire</b> et <b>cellule_fraude</b>) avec le rapport complet, et <b>examine les photos</b> : le système n'en juge jamais le contenu.</p><p>Un <b>expert d'assurance</b> peut contrôler les faits en cas de besoin. Son retour vers le système (nouveaux constats, nouvelle décision) n'est pas encore branché : c'est une évolution possible. Le formateur utilise la console pour la démonstration.</p>",
+  b("users", null, "user", 40, 520, 300, 220, "Utilisateurs", "assuré · gestionnaire · expert",
+    ["Assuré : reçoit son rapport", "Gestionnaire : reprend les", "escalades, examine les photos", "Expert : contrôle les faits"], [],
+    "<p>Trois publics. L'assuré reçoit la version courte du rapport, sans le détail anti-fraude. Le gestionnaire reprend les dossiers escaladés (files <b>gestionnaire</b> et <b>cellule_fraude</b>) avec le rapport complet, et <b>examine les photos</b> : le système n'en juge jamais le contenu.</p><p>Un <b>expert d'assurance</b> peut contrôler les faits en cas de besoin. Son retour vers le système (nouveaux constats, nouvelle décision) n'est pas encore branché : c'est une évolution possible.</p>",
     ["src/kaldera/rapport.py"]);
 
   b("console", null, "core", 440, 100, 1100, 1000, "Console Kaldera", "Cloud Run · europe-west9 · image Docker", [], [],

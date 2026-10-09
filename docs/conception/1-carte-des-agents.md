@@ -9,7 +9,7 @@ Chaque agent répond à une seule question, ne lit que sa **vue** (moindre privi
 | Agent | Question | Lit (sa vue) | Section produite | Ne fait jamais |
 |---|---|---|---|---|
 | **Éligibilité** | Le contrat couvre-t-il ce sinistre ? (conditions 1 à 5 du [§4](../specs_metier.md#L71-L82)) | Contrat (statut, cotisations, formule, date de souscription), type et dates du sinistre | `eligibilite` | Chiffrer, appliquer le plafond |
-| **Pièces** | Les pièces exigées sont-elles présentes et lisibles ? ([§5](../specs_metier.md#L91-L108)) | Type de sinistre, pièces jointes, dépôts déjà lus dans l'espace assuré | `pieces` | Chiffrer, juger la fraude |
+| **Pièces** | Les pièces exigées sont-elles présentes et lisibles ? ([§5](../specs_metier.md#L91-L108)) | Type de sinistre, pièces jointes, dépôts déjà lus dans l'espace assuré | `pieces` | Chiffrer, juger la fraude, juger le contenu d'une photo (sa présence seule compte) |
 | **Estimation** | Combien l'assureur rembourse-t-il ? ([§6](../specs_metier.md#L110-L118) + plafond du [§4](../specs_metier.md#L84-L86)) | Montant déclaré, factures lisibles, franchise et plafond de la formule | `estimation` | Juger la fraude |
 | **Anti-fraude** | Faut-il consulter le partenaire, et que dit-il ? ([§7](../specs_metier.md#L120-L145)) | Les 7 champs du contrat, plus le montant justifié (pour F4) | `avis_fraude` | Émettre un avis, recopier une réponse non conforme, relancer |
 | **Superviseur-décideur** | Qui agit ensuite, et quelle issue ? ([§10](../specs_metier.md#L180-L194)) | Tout l'état, **sauf la réponse brute du partenaire** | `issue` | Refaire le travail d'un agent, modifier une valeur (sa revue de fond ne fait que signaler, livrable 2) |

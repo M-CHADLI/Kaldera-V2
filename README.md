@@ -27,7 +27,9 @@ motivée, expliquée dans un rapport, même quand le partenaire est lent, menteu
   v2.0, sans routes de simulation, avec un score explicable par règles.
 - Analyse de dossier : le contrat, la déclaration, les factures, les photos et le dépôt de plainte
   sont importés pièce par pièce (ou en un seul PDF) ; un agent d'extraction produit la demande
-  au format du §3 et une fiche à valider avant tout traitement. Rien n'est conservé.
+  au format du §3 et une fiche à valider avant tout traitement. Rien n'est conservé. Une photo est exigée
+  (présence) mais son contenu n'est jamais jugé : la fiche et le rapport la signalent « à examiner par un
+  gestionnaire ou un expert ».
 - Console web : importer les pièces du dossier, rejouer les scénarios (repliés), piloter le partenaire simulé, lire fiches,
   rapports, traces et métriques par agent ; elle reconnaît un partenaire simulé, réel
   ou injoignable.
