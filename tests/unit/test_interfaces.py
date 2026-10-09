@@ -54,9 +54,18 @@ def test_la_console_et_les_routes_de_lecture() -> None:
     assert client.get("/api/bornes").json()["duree_max_s"] <= 10
 
 
+def test_la_liste_dit_quels_scenarios_consultent_le_partenaire() -> None:
+    consulte = {s["id"]: s["consulte_partenaire"] for s in client.get("/api/scenarios").json()}
+    # Sans indicateur F1 à F4, ou conclue avant l'agent Anti-fraude : aucun appel (§7).
+    assert consulte["NOM-01"] == 0 and consulte["BCL-01"] == 0
+    assert consulte["AF-01"] == 1 and consulte["INV-01"] == 1
+    assert consulte["PAN-01"] == 2  # 2 demandes sur 5 atteignent le partenaire
+
+
 def test_rejouer_un_scenario_compare_a_l_attendu(partenaire_simule: list[dict[str, Any]]) -> None:
     reponse = client.post("/api/scenarios/NOM-02/rejouer").json()
     assert reponse["conformes"] == [True] and partenaire_simule == [{"mode": "normal"}]
+    assert reponse["appels_partenaire"] == 0  # contrat résilié : arrêt dès l'éligibilité
     assert reponse["type_partenaire"] == "simulé" and reponse["reglage"] == {"mode": "normal"}
     client.post("/api/scenarios/NOM-02/rejouer?mode=panne")
     assert partenaire_simule[-1] == {"mode": "panne"}

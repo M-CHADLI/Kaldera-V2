@@ -7,7 +7,7 @@ Livrable 4 du [brief](../brief.md#L85). Mesures relevées le **9 octobre 2026** 
 | Mesure | Code fourni (commit `b28793b`) | Équipe d'agents (9 octobre 2026) |
 |---|---|---|
 | Tests d'acceptance réussis | **11 / 56** (45 échecs) | **56 / 56** |
-| Tests au total | 56 | **510** réussis (56 d'acceptance + 454 unitaires) |
+| Tests au total | 56 | **511** réussis (56 d'acceptance + 455 unitaires) |
 | Couverture de `kaldera` (lignes et branches) | — | **98,77 %** (seuil bloquant : 85 %) |
 | ruff (lint et format), mypy | — | Aucune erreur |
 | Banc d'épreuve, 3 rejeux | — | **28 / 28** scénarios conformes et stables |
@@ -33,7 +33,7 @@ cd /tmp/avant && "<dépôt>/.venv/Scripts/python" -m pytest tests/acceptance -q 
 | [tests/acceptance/test_equipe_orchestration.py](../tests/acceptance/test_equipe_orchestration.py) | 40 |
 | [tests/unit/test_equipe.py](../tests/unit/test_equipe.py) | 31 |
 | [tests/unit/test_historique.py](../tests/unit/test_historique.py) | 12 |
-| [tests/unit/test_interfaces.py](../tests/unit/test_interfaces.py) | 23 |
+| [tests/unit/test_interfaces.py](../tests/unit/test_interfaces.py) | 24 |
 | [tests/unit/test_partenaire.py](../tests/unit/test_partenaire.py) | 33 |
 | [tests/unit/test_partenaire_antifraude.py](../tests/unit/test_partenaire_antifraude.py) | 13 |
 | [tests/unit/test_partenaire_journal.py](../tests/unit/test_partenaire_journal.py) | 31 |
@@ -41,9 +41,9 @@ cd /tmp/avant && "<dépôt>/.venv/Scripts/python" -m pytest tests/acceptance -q 
 | [tests/unit/test_extraction.py](../tests/unit/test_extraction.py) | 114 |
 | [tests/unit/test_llm.py](../tests/unit/test_llm.py) | 7 |
 | [tests/unit/test_cas_exemples.py](../tests/unit/test_cas_exemples.py) | 98 |
-| **Total** | **510** |
+| **Total** | **511** |
 
-Couverture : 1 588 instructions, 14 non couvertes ; 518 branches, 12 partielles. Tous les modules sont à 100 %, sauf `extraction.py` (97 %, des cas limites de lecture), `cli.py` (90 %), `llm.py` (60 %, la connexion réelle à Azure AI) et `web.py` (97 %, le réglage du partenaire simulé par HTTP).
+Couverture : 1 590 instructions, 14 non couvertes ; 518 branches, 12 partielles. Tous les modules sont à 100 %, sauf `extraction.py` (97 %, des cas limites de lecture), `cli.py` (90 %), `llm.py` (60 %, la connexion réelle à Azure AI) et `web.py` (97 %, le réglage du partenaire simulé par HTTP).
 
 ## Banc d'épreuve
 
@@ -65,7 +65,7 @@ Le décompte de la revue de fond sur les trois rejeux a été fait par un script
 ## Commandes pour reproduire
 
 ```bash
-uv run pytest -q -p no:cacheprovider --cov=kaldera   # 510 passed ; Total coverage: 98.77%
+uv run pytest -q -p no:cacheprovider --cov=kaldera   # 511 passed ; Total coverage: 98.77%
 uv run pytest tests/acceptance -q -p no:cacheprovider  # 56 passed
 uv run ruff check . && uv run ruff format --check . && uv run mypy src
 uv run python scripts/epreuve.py --repetitions 3       # 28 scénarios conformes sur 28
@@ -78,7 +78,7 @@ Aucun service externe n'est requis : les tests et le banc lancent leur propre pa
 
 Le workflow [ci.yml](../.github/workflows/ci.yml) lance à chaque push la qualité, les tests avec la couverture, le banc d'épreuve et un déploiement de test Docker Compose. Il dépose les preuves en artefact `preuves-execution` (`coverage.xml`, `rapport-tests.xml`, `epreuve-resultats.md`).
 
-Dernier run vert : [run 37917040867](https://github.com/M-CHADLI/Kaldera-V2/actions/runs/37917040867), le 9 octobre 2026, sur le commit `019dcf9`. Les trois jobs sont verts (qualité, tests avec couverture, déploiement de test) : 477 tests et 98,76 % de couverture. **Ce run précède** le changement sur les photos (contenu jamais jugé) et le journal du partenaire : les chiffres de cette page (510 tests, 98,77 %) sont ceux de l'arbre de travail du 9 octobre, et la CI les mesurera au prochain push.
+Dernier run vert : [run 37917040867](https://github.com/M-CHADLI/Kaldera-V2/actions/runs/37917040867), le 9 octobre 2026, sur le commit `019dcf9`. Les trois jobs sont verts (qualité, tests avec couverture, déploiement de test) : 477 tests et 98,76 % de couverture. **Ce run précède** le changement sur les photos (contenu jamais jugé) et le journal du partenaire : les chiffres de cette page (511 tests, 98,77 %) sont ceux de l'arbre de travail du 9 octobre, et la CI les mesurera au prochain push.
 
 ## Environnement Google Cloud
 

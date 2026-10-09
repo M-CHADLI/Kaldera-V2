@@ -44,6 +44,7 @@
   .scen:hover, .scen[aria-current="true"] { background: var(--muted); }
   .scen b { font: 600 13px var(--mono); margin-right: 8px; }
   .scen small { display: block; color: var(--fg-2); font: 12px var(--mono); }
+  .appel { color: var(--esc); font-weight: 600; }
   section { padding: 20px 24px; min-width: 0; }
   h1 { font: 700 22px var(--mono); margin: 0 0 4px; letter-spacing: -.01em; }
   .sous { color: var(--fg-2); margin: 0 0 16px; }
@@ -196,19 +197,27 @@ function afficherMetriques(m) {
   $("metriques").innerHTML = `<table><tr><th>Agent</th><th>Appels</th><th>Échecs</th><th>Latence (ms)</th><th>Appels externes</th><th>Anomalies</th></tr>${lignes}</table>`;
 }
 
+// Le partenaire n'est consulté qu'en présence d'un indicateur F1 à F4, et seulement si la demande
+// arrive jusqu'à l'agent Anti-fraude : beaucoup de scénarios ne l'appellent jamais.
+function consultation(s) {
+  if (!s.consulte_partenaire) return "sans appel au partenaire";
+  const part = s.consulte_partenaire === s.demandes ? "" : ` (${s.consulte_partenaire}/${s.demandes} demandes)`;
+  return `<span class="appel">consulte le partenaire${part}</span>`;
+}
+
 function afficherListe() {
   const cats = ["tous", ...new Set(SCENARIOS.map((s) => s.categorie))];
   $("filtres").innerHTML = cats.map((c) => `<button class="chip" data-cat="${c}" aria-pressed="${c === filtre}">${c}</button>`).join("");
   $("filtres").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { filtre = b.dataset.cat; afficherListe(); }));
   const visibles = SCENARIOS.filter((s) => filtre === "tous" || s.categorie === filtre);
-  $("liste").innerHTML = visibles.map((s) => `<button class="scen" data-id="${s.id}" aria-current="${choisi && choisi.id === s.id}"><b>${s.id}</b>${esc(s.titre)}<small>partenaire ${esc(s.partenaire.mode)}${s.partenaire.variante ? " · " + esc(s.partenaire.variante) : ""} · ${s.demandes} demande(s)</small></button>`).join("");
+  $("liste").innerHTML = visibles.map((s) => `<button class="scen" data-id="${s.id}" aria-current="${choisi && choisi.id === s.id}"><b>${s.id}</b>${esc(s.titre)}<small>partenaire ${esc(s.partenaire.mode)}${s.partenaire.variante ? " · " + esc(s.partenaire.variante) : ""} · ${s.demandes} demande(s) · ${consultation(s)}</small></button>`).join("");
   $("liste").querySelectorAll(".scen").forEach((b) => b.addEventListener("click", () => choisir(b.dataset.id)));
 }
 
 function choisir(id) {
   choisi = SCENARIOS.find((s) => s.id === id);
   $("titre").textContent = `${choisi.id} · ${choisi.titre}`;
-  $("sous").textContent = `Catégorie ${choisi.categorie} · ${choisi.demandes} demande(s) · partenaire prévu : ${choisi.partenaire.mode}`;
+  $("sous").innerHTML = `Catégorie ${esc(choisi.categorie)} · ${choisi.demandes} demande(s) · partenaire prévu : ${esc(choisi.partenaire.mode)} · ${consultation(choisi)}`;
   $("rejouer").disabled = false;
   afficherListe();
 }
@@ -219,7 +228,9 @@ async function rejouer() {
     const r = await fetch(`/api/scenarios/${choisi.id}/rejouer?mode=${$("mode").value}`, {method: "POST"});
     const corps = await r.json();
     if (!r.ok) throw new Error(corps.detail);
-    $("etat").textContent = `Terminé en ${corps.duree_s} s · ${corps.conformes.filter(Boolean).length}/${corps.conformes.length} conforme(s)`;
+    const appels = corps.appels_partenaire ?? 0;
+    $("etat").textContent = `Terminé en ${corps.duree_s} s · ${corps.conformes.filter(Boolean).length}/${corps.conformes.length} conforme(s) · `
+      + (appels ? `partenaire appelé ${appels} fois` : "partenaire non appelé (aucun indicateur F1 à F4, ou demande conclue avant)");
     $("resultats").innerHTML = corps.fiches.map((f, i) => carte(f, corps.attendus[i], corps.conformes[i], i)).join("");
     brancherOnglets($("resultats"));
     afficherMetriques(corps.metriques);

@@ -50,6 +50,14 @@ def scenarios() -> dict[str, dict[str, Any]]:
     return {s["id"]: s for s in (json.loads(ligne) for ligne in lignes if ligne.strip())}
 
 
+def consultations_partenaire(scenario: dict[str, Any]) -> int:
+    """Demandes du scénario qui interrogent le partenaire : celles dont l'attendu porte un avis
+    ou le mode dégradé (§7, §9). Les autres s'arrêtent avant, ou n'ont aucun indicateur F1 à F4."""
+    return sum(
+        1 for a in scenario["attendu"] if a.get("avis_fraude") is not None or a.get("mode_degrade")
+    )
+
+
 def regler_partenaire(reglage: dict[str, Any]) -> None:
     """Remet à zéro le partenaire simulé et lui applique un comportement."""
     with httpx.Client(base_url=url_partenaire(), timeout=3.0) as client:
@@ -125,6 +133,7 @@ def lister_scenarios() -> list[dict[str, Any]]:
             "titre": s["titre"],
             "partenaire": s["partenaire"],
             "demandes": len(s["demandes"]),
+            "consulte_partenaire": consultations_partenaire(s),
         }
         for s in scenarios().values()
     ]
@@ -168,6 +177,8 @@ def rejouer(identifiant: str, mode: str = "scenario") -> dict[str, Any]:
             conforme(f, a) for f, a in zip(resultat["fiches"], scenario["attendu"], strict=True)
         ],
         "metriques": resultat["metriques"],
+        # Mesuré pendant ce rejeu, et non déduit de l'attendu.
+        "appels_partenaire": sum(s["appels_externes"] for s in resultat["metriques"].values()),
     }
 
 

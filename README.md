@@ -153,7 +153,7 @@ Détails et limites : [docs/conception/3-a2a-mode-degrade.md](docs/conception/3-
 - `external_agent/` — service anti-fraude partenaire simulé et son contrat (`contrat.md`)
 - `eval/scenarios.jsonl` — scénarios de recette ; `scripts/epreuve.py` — banc d'épreuve
 - `scripts/deployer_partenaire.sh`, `deployer_console.sh` — déploiement Cloud Run ; `partner_ctl.py` — pilotage du simulateur
-- `tests/acceptance/` — suite d'acceptance fournie (56 tests) ; `tests/unit/` — tests unitaires (454)
+- `tests/acceptance/` — suite d'acceptance fournie (56 tests) ; `tests/unit/` — tests unitaires (455)
 - `docs/conception/` — dossier de conception ; `docs/journal-ajustements.md` — journal
 - `docs/epreuve-resultats.md` — dernière épreuve ; `docs/preuves-execution.md` — preuve d'exécution
 
