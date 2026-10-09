@@ -1,0 +1,217 @@
+{
+  "01-degat-des-eaux-nominal": {
+    "reference": "KAL-26-8101",
+    "issue": "decision",
+    "decision": "acceptee",
+    "montant_rembourse": 1500.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "Remboursement accordé"
+    ],
+    "fichiers_scannes": []
+  },
+  "02-plafond-essentiel": {
+    "reference": "KAL-26-8102",
+    "issue": "decision",
+    "decision": "acceptee",
+    "montant_rembourse": 3000.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "Plafond de la formule essentiel atteint",
+      "3 000,00 €"
+    ],
+    "fichiers_scannes": []
+  },
+  "03-vol-avec-plainte": {
+    "reference": "KAL-26-8103",
+    "issue": "decision",
+    "decision": "acceptee",
+    "montant_rembourse": 1650.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "Remboursement accordé"
+    ],
+    "fichiers_scannes": []
+  },
+  "04-fraude-elevee": {
+    "reference": "KAL-26-8104",
+    "issue": "escalade",
+    "decision": null,
+    "montant_rembourse": null,
+    "file": "cellule_fraude",
+    "mode_degrade": false,
+    "avis_fraude": "eleve",
+    "score_fraude": 0.88,
+    "motif_contient": [
+      "Suspicion de fraude"
+    ],
+    "fichiers_scannes": []
+  },
+  "05-contrat-resilie": {
+    "reference": "KAL-26-8105",
+    "issue": "decision",
+    "decision": "refusee",
+    "montant_rembourse": 0.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "contrat non actif"
+    ],
+    "fichiers_scannes": []
+  },
+  "06-facture-illisible": {
+    "reference": "KAL-26-8106",
+    "issue": "escalade",
+    "decision": null,
+    "montant_rembourse": null,
+    "file": "gestionnaire",
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "Pièces manquantes",
+      "facture"
+    ],
+    "fichiers_scannes": [
+      "3-facture-chauffage-occitan.pdf"
+    ]
+  },
+  "07-seuil-delegation": {
+    "reference": "KAL-26-8107",
+    "issue": "escalade",
+    "decision": null,
+    "montant_rembourse": null,
+    "file": "gestionnaire",
+    "mode_degrade": false,
+    "avis_fraude": "faible",
+    "score_fraude": 0.28,
+    "motif_contient": [
+      "Seuil de délégation dépassé"
+    ],
+    "fichiers_scannes": []
+  },
+  "08-carence": {
+    "reference": "KAL-26-8108",
+    "issue": "decision",
+    "decision": "refusee",
+    "montant_rembourse": 0.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "carence"
+    ],
+    "fichiers_scannes": []
+  },
+  "09-declaration-hors-delai": {
+    "reference": "KAL-26-8109",
+    "issue": "decision",
+    "decision": "refusee",
+    "montant_rembourse": 0.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "déclaration hors délai"
+    ],
+    "fichiers_scannes": []
+  },
+  "10-cotisations-impayees": {
+    "reference": "KAL-26-8110",
+    "issue": "decision",
+    "decision": "refusee",
+    "montant_rembourse": 0.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "cotisations impayées"
+    ],
+    "fichiers_scannes": []
+  },
+  "11-risque-modere": {
+    "reference": "KAL-26-8111",
+    "issue": "escalade",
+    "decision": null,
+    "montant_rembourse": null,
+    "file": "gestionnaire",
+    "mode_degrade": false,
+    "avis_fraude": "modere",
+    "score_fraude": 0.46,
+    "motif_contient": [
+      "Contrôle renforcé"
+    ],
+    "fichiers_scannes": []
+  },
+  "12-premium-deux-factures": {
+    "reference": "KAL-26-8112",
+    "issue": "decision",
+    "decision": "acceptee",
+    "montant_rembourse": 7700.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": "faible",
+    "score_fraude": 0.28,
+    "motif_contient": [
+      "Remboursement accordé"
+    ],
+    "fichiers_scannes": []
+  },
+  "13-bris-de-glace-ecart-declare": {
+    "reference": "KAL-26-8113",
+    "issue": "decision",
+    "decision": "acceptee",
+    "montant_rembourse": 730.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": "faible",
+    "score_fraude": 0.06,
+    "motif_contient": [
+      "Remboursement accordé"
+    ],
+    "fichiers_scannes": []
+  },
+  "14-piece-manquante": {
+    "reference": "KAL-26-8114",
+    "issue": "escalade",
+    "decision": null,
+    "montant_rembourse": null,
+    "file": "gestionnaire",
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "Pièces manquantes",
+      "photo"
+    ],
+    "fichiers_scannes": []
+  },
+  "15-garantie-non-couverte": {
+    "reference": "KAL-26-8115",
+    "issue": "decision",
+    "decision": "refusee",
+    "montant_rembourse": 0.0,
+    "file": null,
+    "mode_degrade": false,
+    "avis_fraude": null,
+    "score_fraude": null,
+    "motif_contient": [
+      "non couvert par la formule essentiel"
+    ],
+    "fichiers_scannes": []
+  }
+}

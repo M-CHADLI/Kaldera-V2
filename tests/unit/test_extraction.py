@@ -344,7 +344,73 @@ def test_un_modele_manipule_ne_passe_pas_la_validation() -> None:
         "sinistre": {**MODELE_JSON["sinistre"], "montant_declare": -5},
     }
     analyse = ex.analyser(pdf(DOSSIER), [ex.ExtracteurLLM(FauxModele(json.dumps(piege)))])
-    assert not analyse.pret and len(analyse.anomalies) >= 2
+    assert not analyse.pret
+    assert any(a.startswith("contrat.formule") for a in analyse.anomalies)
+    assert "sinistre.montant_declare" in analyse.manquants  # un montant négatif n'est pas lu
+
+
+@pytest.mark.parametrize("montant", [0, 0.0, "0", -12, "néant"])
+def test_un_montant_nul_recopie_de_la_consigne_n_est_pas_un_montant_lu(montant: Any) -> None:
+    donnees = {**MODELE_JSON, "sinistre": {**MODELE_JSON["sinistre"], "montant_declare": montant}}
+    brut = ex.ExtracteurLLM(FauxModele(json.dumps(donnees))).extraire("texte")
+    assert "sinistre.montant_declare" not in brut.champs
+
+
+def test_le_premier_document_ne_masque_plus_le_montant_du_suivant() -> None:
+    """Le contrat renvoie un montant nul ; la déclaration donne le vrai : c'est lui qui est gardé."""
+    reponses = [
+        {**MODELE_JSON, "sinistre": {**MODELE_JSON["sinistre"], "montant_declare": 0.0}},
+        MODELE_JSON,
+    ]
+
+    class ModeleParDocument:
+        def invoke(self, consigne: str) -> Any:
+            return type("R", (), {"content": json.dumps(reponses.pop(0))})()
+
+    analyse = ex.analyser_documents(
+        docs(("contrat", "c.pdf", pdf(CONTRAT)), ("declaration", "d.pdf", pdf(DECLARATION))),
+        [ex.ExtracteurLLM(ModeleParDocument())],
+    )
+    assert analyse.pret and analyse.demande["sinistre"]["montant_declare"] == 900.0
+
+
+def test_la_consigne_ne_contient_aucune_valeur_recopiable() -> None:
+    consigne = ex._consigne("texte")
+    assert "0.0" not in consigne and "essentiel|confort" not in consigne
+    assert '"montant_declare": null' in consigne
+
+
+@pytest.mark.parametrize(
+    ("texte", "attendu"),
+    [
+        ("Facture\nTotal TTC 1 440,00 €", 1440.0),
+        ("Facture\nTotal HT 1 200,00 €\nTVA 20 % 240,00 €\nTotal TTC 1 440,00 €", 1440.0),
+        ("Facture\nMontant TTC à régler 99 €", 99.0),
+        ("Facture\nNet à payer : 99 €\nTotal 120 €", 99.0),
+        ("Facture\nTotal HT 1 200,00 €", 1200.0),
+        ("Facture\n100 € puis 200 €", None),
+        ("Facture sans aucun montant", None),
+    ],
+)
+def test_le_total_d_une_facture_se_lit_avec_ou_sans_deux_points(
+    texte: str, attendu: float | None
+) -> None:
+    assert ex._montant_facture(texte) == attendu
+
+
+def test_une_facture_sans_montant_lisible_escalade_au_lieu_de_refuser() -> None:
+    """Un justifié à 0 € donnerait un refus ; une pièce illisible donne une escalade."""
+    lignes = [x for x in DOSSIER if not x.startswith("- ")]
+    sans_montant = docs(
+        ("dossier", "d.pdf", pdf(lignes)),
+        ("facture", "f.pdf", pdf(["Facture n° 5 — Plomberie", "Prestation de dépannage"])),
+        ("photo", "p.png", PNG),
+    )
+    analyse = ex.analyser_documents(sans_montant)
+    assert {"type": "facture", "lisible": False} in analyse.demande["pieces"]
+    assert any("considérée comme illisible" in n for n in analyse.a_verifier)
+    fiche = kaldera.traiter_demande(analyse.demande)
+    assert fiche["issue"] == "escalade" and fiche["file"] == "gestionnaire"
 
 
 @pytest.mark.parametrize("reponse", ["pas du json du tout", RuntimeError("réseau"), "[1, 2]"])
@@ -619,3 +685,49 @@ def test_analyse_web_par_pieces_erreurs_metier(monkeypatch: pytest.MonkeyPatch) 
         _envoi([{"role": "contrat", "nom": "c.pdf", "contenu": _b64(pdf(CONTRAT))}]).status_code
         == 503
     )
+
+
+@pytest.mark.parametrize(
+    ("valeur", "attendu"),
+    [
+        ("3", 3),
+        ("2 sinistres", 2),
+        ("aucun", 0),
+        ("Aucun sinistre déclaré", 0),
+        ("pas de sinistre", 0),
+        ("deux", 2),
+        ("beaucoup", None),
+        (True, None),
+        ("un seul", 1),
+    ],
+)
+def test_nombre_de_sinistres_ecrit_en_chiffres_ou_en_lettres(
+    valeur: Any, attendu: int | None
+) -> None:
+    assert ex._entier(valeur) == attendu
+
+
+def test_une_piece_sans_type_renvoyee_par_le_modele_est_ignoree() -> None:
+    donnees = {
+        **MODELE_JSON,
+        "pieces": [
+            {"type": None, "lisible": None, "montant": None},
+            {"type": "", "lisible": True},
+            {"type": "photo", "lisible": True},
+        ],
+    }
+    brut = ex.ExtracteurLLM(FauxModele(json.dumps(donnees))).extraire("texte")
+    assert [p["type"] for p, _ in brut.pieces] == ["photo"]
+
+
+@pytest.mark.parametrize(
+    ("valeur", "retenue"),
+    [("KAL-26-0105", True), ("H-2021-004871", False), ("kal-26-0105", False), ("KAL-26-01", False)],
+)
+def test_seule_une_reference_au_format_kal_est_retenue_du_modele(
+    valeur: str, retenue: bool
+) -> None:
+    brut = ex.ExtracteurLLM(FauxModele(json.dumps({**MODELE_JSON, "reference": valeur}))).extraire(
+        "texte"
+    )
+    assert ("reference" in brut.champs) is retenue

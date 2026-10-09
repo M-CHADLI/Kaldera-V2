@@ -136,11 +136,12 @@ Détails et limites : [docs/conception/3-a2a-mode-degrade.md](docs/conception/3-
 - `src/kaldera/extraction.py` — agent d'analyse de dossier (PDF, images) : extracteurs, validation, fiche
 - `src/kaldera/web.py`, `console.html` — console web
 - `exemples/` — dossier PDF et pièces d'exemple (données fictives) ; `scripts/exemple_dossier_pdf.py` les génère
+- `exemples/cas/` — 15 dossiers de pièces pour le test de bout en bout, en deux variantes (`A-etiquete`, `B-libre`), avec le résultat attendu de chacun ; `scripts/generer_cas_exemples.py` les génère
 - `partenaire_antifraude/` — notre partenaire anti-fraude, déployable sur Cloud Run
 - `external_agent/` — service anti-fraude partenaire simulé et son contrat (`contrat.md`)
 - `eval/scenarios.jsonl` — scénarios de recette ; `scripts/epreuve.py` — banc d'épreuve
 - `scripts/deployer_partenaire.sh`, `deployer_console.sh` — déploiement Cloud Run ; `partner_ctl.py` — pilotage du simulateur
-- `tests/acceptance/` — suite d'acceptance fournie (56 tests) ; `tests/unit/` — tests unitaires (287)
+- `tests/acceptance/` — suite d'acceptance fournie (56 tests) ; `tests/unit/` — tests unitaires (421)
 - `docs/conception/` — dossier de conception ; `docs/journal-ajustements.md` — journal
 - `docs/epreuve-resultats.md` — dernière épreuve ; `docs/preuves-execution.md` — preuve d'exécution
 
