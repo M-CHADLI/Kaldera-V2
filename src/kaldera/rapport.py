@@ -75,9 +75,16 @@ def _pieces(section: dict[str, Any] | None, complements: int) -> list[str]:
     demandes = f", {complements} complément(s) demandé(s)" if complements else ""
     if section["conformes"]:
         factures = " + ".join(euros(m) for m in section["factures"]) or "aucune"
-        return [f"2. Pièces — complètes{demandes} ; factures lisibles : {factures} (§5)."]
-    manquantes = ", ".join(section["a_redemander"])
-    return [f"2. Pièces — manquantes ou illisibles : {manquantes}{demandes} (§5)."]
+        lignes = [f"2. Pièces — complètes{demandes} ; factures lisibles : {factures} (§5)."]
+    else:
+        manquantes = ", ".join(section["a_redemander"])
+        lignes = [f"2. Pièces — manquantes ou illisibles : {manquantes}{demandes} (§5)."]
+    if section.get("non_analysees"):
+        lignes.append(
+            f"   {', '.join(section['non_analysees'])} : reçue(s), contenu non analysé par le système"
+            " — à examiner par un gestionnaire ou un expert."
+        )
+    return lignes
 
 
 def _montant(section: dict[str, Any] | None, numero: str = "3. ") -> list[str]:

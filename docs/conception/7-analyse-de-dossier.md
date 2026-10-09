@@ -17,7 +17,7 @@ pièces importées → texte → extracteur → validation unique → fiche + de
 | Contrat | `contrat` | PDF | assuré, formule, souscription, statut, cotisations |
 | Déclaration de sinistre | `declaration` | PDF | type, dates, montant déclaré, description, historique |
 | Facture(s) | `facture` | PDF, un par fichier | une pièce `facture` avec son montant total |
-| Photo(s) | `photo` | JPEG ou PNG | une pièce `photo` |
+| Photo(s) | `photo` | JPEG ou PNG | une pièce `photo`, **jamais jugée sur son contenu** (voir ci-dessous) |
 | Dépôt de plainte | `plainte` | PDF | une pièce `depot_plainte` (vol) |
 | Dossier complet | `dossier` | PDF | tout, depuis un seul document |
 
@@ -57,3 +57,22 @@ Choix par `KALDERA_EXTRACTION`. **L'extracteur par modèle envoie le texte du do
 - Points d'entrée web : `POST /api/analyse` (un PDF) et `POST /api/analyse-dossier` (pièces par rôle) dans [web.py](../../src/kaldera/web.py)
 - Ligne de commande : `uv run python -m kaldera.extraction dossier.pdf --traiter`
 - Exemples (données fictives) : [exemples/](../../exemples/), générés par `scripts/exemple_dossier_pdf.py`
+
+## La photo : une preuve pour un humain, pas un signal pour une règle
+
+Le système sait vérifier qu'une photo **est présente** et qu'il s'agit bien d'une image JPEG ou PNG. Il ne sait pas
+dire ce qu'elle montre : un rectangle uni, une capture d'écran ou une image sans rapport passeraient de la même façon.
+Plutôt que de simuler un contrôle (l'ancien seuil de 1 Ko n'en était pas un), la photo est traitée ainsi :
+
+- **Présence exigée**, comme le prévoit la spécification ([§5](../specs_metier.md#L90-L97)) : sans photo, la demande est
+  complétée ou escaladée, comme avant.
+- **Contenu jamais jugé** : l'analyse ne l'affirme pas « lisible » ou « conforme » ; la fiche écrit « jointe, contenu non
+  analysé » et le rapport du gestionnaire ajoute « à examiner par un gestionnaire ou un expert ». Le rapport de l'assuré
+  n'en dit rien.
+- **Un humain tranche** : en cas d'escalade, le gestionnaire (ou un expert d'assurance, qui peut aussi contrôler les
+  faits) examine la photo avec le dossier.
+
+Limites assumées : une demande dont la photo est vide peut encore être acceptée automatiquement, mais le rapport dit
+désormais que personne ne l'a regardée ; les pièces ne sont pas conservées par Kaldera (pas de stockage), donc la
+transmission de la photo au gestionnaire reste à brancher ; le retour d'un expert vers le système (nouveaux faits,
+nouvelle décision) n'est pas implémenté, c'est une évolution possible.

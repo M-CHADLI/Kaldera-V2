@@ -54,7 +54,8 @@ Résultats établis en **exécutant le vrai pipeline** (extraction de la variant
 | `15-garantie-non-couverte` (KAL-26-8115) | Vol sous la formule essentiel, qui ne couvre ni les vols ni les bris de glace : refus (E5), pièces complètes par ailleurs. | refusée, 0 € |
 
 Le cas 06 contient une facture scannée : un PDF réduit à une image, sans couche de texte, donc
-identique dans les deux variantes. Le cas 14 n'a pas de photo, volontairement.
+identique dans les deux variantes. Le cas 14 n'a pas de photo, volontairement. Les photos des autres cas sont des
+images factices : le système vérifie leur présence, jamais leur contenu (voir la conception, document 7).
 
 ## Régénérer et vérifier
 

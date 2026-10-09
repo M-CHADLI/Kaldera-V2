@@ -632,11 +632,14 @@ def test_dossier_trop_volumineux_et_piece_trop_grosse(monkeypatch: pytest.Monkey
         ex.analyser_documents(docs(("photo", "a.png", PNG)))
 
 
-def test_petite_photo_consideree_illisible() -> None:
+def test_la_photo_n_est_jamais_jugee_sur_son_contenu() -> None:
+    """Une photo est une preuve pour un humain : seule sa présence compte, même minuscule."""
     analyse = ex.analyser_documents(
         docs(("dossier", "d.pdf", pdf(sans("- "))), ("photo", "p.png", PNG[:200]))
     )
-    assert {"type": "photo", "lisible": False} in analyse.demande["pieces"]
+    assert {"type": "photo", "lisible": True} in analyse.demande["pieces"]
+    assert any("contenu non analysé" in note for note in analyse.a_verifier)
+    assert "- photo · jointe, contenu non analysé" in ex.fiche_contrat(analyse)
 
 
 def _envoi(documents: list[dict[str, str]]) -> Any:

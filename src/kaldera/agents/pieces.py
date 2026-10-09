@@ -11,6 +11,9 @@ from .. import regles
 from .base import Resultat
 
 
+NON_ANALYSEES = ("photo",)
+
+
 class Pieces:
     nom = "pieces"
     section = "pieces"
@@ -33,6 +36,8 @@ class Pieces:
             "a_redemander": a_redemander,
             "sans_depot": list(vue["sans_depot"]),
             "factures": factures,
+            # Pièces reçues dont le contenu n'est pas jugé par le système : un humain les examine.
+            "non_analysees": sorted({p["type"] for p in recues if p.get("type") in NON_ANALYSEES}),
         }
         if not a_redemander:
             return Resultat("conclu", valeur)

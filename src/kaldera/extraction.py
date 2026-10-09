@@ -780,7 +780,12 @@ def _piece_importee(document: Document, notes: list[str]) -> dict[str, Any]:
     if document.role == "photo":
         if not document.octets.startswith(FORMATS_IMAGE):
             raise PdfInvalide("image non reconnue (JPEG ou PNG attendus)")
-        return {"type": "photo", "lisible": len(document.octets) > 1024}
+        # Le système vérifie qu'une image a été reçue, jamais ce qu'elle montre : la photo est une
+        # preuve pour un humain (gestionnaire, expert), pas un signal pour une règle.
+        notes.append(
+            f"{document.nom} : photo reçue, contenu non analysé par le système (à examiner par un humain)"
+        )
+        return {"type": "photo", "lisible": True}
     try:
         texte, _ = lire_pdf(document.octets)
     except PdfInvalide as exc:
@@ -885,7 +890,11 @@ def fiche_contrat(analyse: Analyse) -> str:
     if d["pieces"]:
         for p in d["pieces"]:
             montant = f" · {p['montant']:.2f} €" if "montant" in p else ""
-            lignes.append(f"- {p['type']}{montant} · {'lisible' if p['lisible'] else 'ILLISIBLE'}")
+            if p["type"] == "photo" and p["lisible"]:
+                etat_piece = "jointe, contenu non analysé"
+            else:
+                etat_piece = "lisible" if p["lisible"] else "ILLISIBLE"
+            lignes.append(f"- {p['type']}{montant} · {etat_piece}")
     else:
         lignes.append("- aucune pièce reconnue")
     for titre, elements in (

@@ -53,6 +53,23 @@ def test_une_demande_non_eligible_s_arrete_sans_appeler_le_partenaire() -> None:
     assert "non éligible" in fiche["rapport"] and "Pièces — non examinées" in fiche["rapport"]
 
 
+def test_la_photo_est_signalee_non_analysee_au_gestionnaire_seulement() -> None:
+    fiche = traiter(demande())
+    assert "contenu non analysé par le système" in fiche["rapport"]
+    assert "non analysé" not in fiche["rapport_assure"]
+
+
+def test_sans_photo_le_rapport_ne_pretend_rien() -> None:
+    d = demande(
+        sinistre={"type": "vol"},
+        pieces=[
+            {"type": "facture", "lisible": True, "montant": 1850.0},
+            {"type": "depot_plainte", "lisible": True},
+        ],
+    )
+    assert "non analysé" not in traiter(d)["rapport"]
+
+
 def test_un_dommage_sous_la_franchise_est_refuse() -> None:
     d = demande(
         sinistre={"montant_declare": 100.0},
