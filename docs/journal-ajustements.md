@@ -2,7 +2,7 @@
 
 Chaque entrée part d'un scénario rejoué et d'un signal observé, jamais d'un réglage au hasard. Règle suivie : une seule modification à la fois, puis les 28 scénarios rejoués ([4-plan-epreuve.md](conception/4-plan-epreuve.md)).
 
-Résultats détaillés de la dernière épreuve : [epreuve-resultats.md](epreuve-resultats.md), produit par `uv run python scripts/epreuve.py --repetitions 3`.
+Résultats détaillés de la dernière épreuve : [epreuve-resultats.md](epreuve-resultats.md), produit par `make epreuve` (`uv run python scripts/epreuve.py --repetitions 3 --sortie docs/epreuve-resultats.md`).
 
 | # | Date | Scénario | Signal observé | Cause | Ajustement | Preuve avant / après | Gardé ? |
 |---|---|---|---|---|---|---|---|
@@ -13,9 +13,11 @@ Résultats détaillés de la dernière épreuve : [epreuve-resultats.md](epreuve
 | 5 | 2026-10-08 | PAN-02 | Demandes bloquées tant que le partenaire ne répond pas (`timeout=None`) | Pas de délai d'appel, lot traité en série | **Bornes** : abandon à 3 s pris sur le budget de la demande ; lot traité en parallèle | Lot de 3 : 3,07 s, contre au moins 15 s en série | Oui |
 | 6 | 2026-10-08 | Les 28 | Étapes au plus : 7 (NOM-07, PAN-01) ; durée de lot au plus : 3,07 s | — | **Aucun** : `etapes_max = 12` et `duree_max_s = 8` gardent une marge suffisante. Pas de réduction tant que les 28 scénarios ne montrent pas de besoin. | 28/28 conformes et stables sur 3 rejeux | Bornes inchangées |
 | 7 | 2026-10-08 | PAN-01 | 2 appels, 2 échecs : le disjoncteur ne s'est jamais ouvert | Les deux demandes concernées partent en parallèle, avant le premier échec | **Aucun pour l'instant** : `disjoncteur_echecs = 2` est sans effet sur un lot de cette taille. Limite consignée, à revoir si les lots grossissent. | — | Non ajusté |
+| 8 | 2026-10-09 | Les 28 | Épreuve rejouée avec la revue de fond active (`KALDERA_REVUE=regles`, valeur par défaut) : **0 anomalie** sur 28 scénarios × 3 rejeux (348 examens, tous `conforme`) | — | **Aucun** : la revue ne signale rien et ne change aucune issue. Bornes, frontières et routages inchangés. | 28/28 conformes et stables sur 3 rejeux, colonne « Anomalies » à 0 ([epreuve-resultats.md](epreuve-resultats.md)) | Sans objet |
+| 9 | 2026-10-09 | Rejeu contre le partenaire réel (Cloud Run) | Second rejeu d'un même scénario : le partenaire refuse le second appel pour le même dossier (`-32029`) ; avis indisponible, mode dégradé | Le partenaire n'évalue chaque dossier qu'une fois ([contrat §6](../external_agent/contrat.md#L167-L173)) ; le registre de Kaldera est limité au lot, donc un nouveau lot appelle à nouveau | **Aucun** : comportement conforme au contrat (aucune relance) et au §9 (mode dégradé). Limite de déploiement consignée : le partenaire tourne avec `--max-instances 1`, car son registre anti-doublon vit en mémoire ; ce registre est perdu au redémarrage de l'instance. | Doublon rejeté, demande conclue en mode dégradé, sans blocage | Non ajusté |
 
 ## Ajustements écartés
 
 | Idée | Pourquoi écartée |
 |---|---|
-| Un registre anti-doublon global au processus | Le banc d'acceptance réinitialise le partenaire entre les scénarios : un registre global refuserait des appels légitimes. Le registre est donc limité au lot. En production, il s'appuiera sur l'historique des demandes. |
+| Un registre anti-doublon global au processus | Le banc d'acceptance réinitialise le partenaire entre les scénarios : un registre global refuserait des appels légitimes. Le registre est donc limité au lot. En production, il pourra s'appuyer sur l'historique des demandes ; ce n'est pas branché aujourd'hui. |

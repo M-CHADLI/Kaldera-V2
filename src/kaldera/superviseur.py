@@ -1,5 +1,8 @@
 """Superviseur-décideur : enchaîne les agents dans un ordre fixe, fait respecter les bornes,
 contrôle la forme des sorties, écrit seul l'état partagé et conclut la demande.
+
+Il peut en plus faire une revue de fond (``revue.py``) : un simple signal noté dans la trace,
+qui ne modifie aucune valeur et ne change jamais l'issue.
 """
 
 from __future__ import annotations
@@ -7,9 +10,9 @@ from __future__ import annotations
 import hashlib
 import json
 from time import perf_counter
-from typing import Any
+from typing import Any, Literal
 
-from . import decision, espace_assure, partenaire, rapport, vues
+from . import decision, espace_assure, partenaire, rapport, revue, vues
 from .agents import STATUTS, Agent, AntiFraude, Eligibilite, Estimation, Pieces, Resultat
 from .bornes import BORNES
 from .etat import Etat
@@ -21,6 +24,10 @@ SCHEMAS: dict[str, set[str]] = {
     "estimation": {"montant_justifie", "montant_estime", "plafond", "plafond_applique"},
     "avis_fraude": {"statut", "indicateurs"},
 }
+
+# La revue de fond ne prend jamais sur le délai du partenaire ni sur cette marge : le reste du
+# traitement garde toujours de quoi aller au bout, la revue ne peut donc pas déclencher de borne.
+MARGE_REVUE_S = 1.0
 
 
 class BorneAtteinte(Exception):
@@ -47,8 +54,11 @@ class Superviseur:
         partenaire_url: str | None = None,
         bornes: dict[str, Any] | None = None,
         client: partenaire.ClientPartenaire | None = None,
+        reviseur: revue.Reviseur | None | Literal["defaut"] = "defaut",
     ) -> None:
         self.bornes = dict(bornes or BORNES)
+        # Revue de fond facultative, par injection ; None la désactive (KALDERA_REVUE à défaut).
+        self.reviseur = revue.choisir_reviseur() if isinstance(reviseur, str) else reviseur
         # Un client par lot : le registre anti-doublon et le disjoncteur sont partagés.
         self.client = client or partenaire.ClientPartenaire(
             partenaire_url,
@@ -166,7 +176,11 @@ class Superviseur:
     # ------------------------------------------------------------------ agents
 
     def _executer(self, etat: Etat, agent: Agent, vue: dict[str, Any]) -> Resultat:
-        """Appelle un agent, contrôle la forme de sa sortie, l'enregistre en son nom."""
+        """Appelle un agent, contrôle la forme de sa sortie, l'enregistre en son nom.
+
+        Puis, si un réviseur est configuré, fait la revue de fond de la section produite : le
+        signal rejoint l'étape de trace (champ ``revue``) sans rien changer au traitement.
+        """
         self._verifier_bornes(etat)
         debut = perf_counter()
         try:
@@ -179,6 +193,9 @@ class Superviseur:
             raise
         duree_ms = (perf_counter() - debut) * 1000
         etat.enregistrer(agent.nom, agent.section, resultat.valeur)
+        details: dict[str, Any] = {}
+        if self.reviseur is not None and resultat.statut != "indetermine":
+            details["revue"] = self._reviser(etat, self.reviseur, agent.section, resultat.valeur)
         etat.noter(
             agent.nom,
             agent.action,
@@ -187,10 +204,27 @@ class Superviseur:
             resultat.statut,
             echec=resultat.echec,
             appels_externes=resultat.appels_externes,
+            **details,
         )
         if resultat.statut == "indetermine":
             raise AgentIndetermine(agent.nom, resultat.motif or "motif non précisé")
         return resultat
+
+    def _reviser(
+        self, etat: Etat, reviseur: revue.Reviseur, section: str, valeur: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Revue de fond : un signal, jamais une correction ; en désaccord, le sous-agent a raison.
+
+        Ne lève jamais d'exception et ne dispose que du temps laissé libre par le reste du
+        traitement : la durée maximale, moins le délai du partenaire et une marge.
+        """
+        budget_s = (
+            self.bornes["duree_max_s"]
+            - self.bornes["delai_partenaire_s"]
+            - MARGE_REVUE_S
+            - etat.ecoule_s()
+        )
+        return revue.reviser(reviseur, section, valeur, budget_s, lire=etat.lire)
 
     def _verifier_bornes(self, etat: Etat) -> None:
         # Une étape est toujours réservée à la conclusion : la trace ne dépasse jamais la borne.

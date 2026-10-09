@@ -241,7 +241,13 @@ def test_metriques_par_agent() -> None:
         }
     ]
     assert metriques.par_agent(fiches) == {
-        "antifraude": {"appels": 2, "echecs": 1, "latence_ms": 20.0, "appels_externes": 2}
+        "antifraude": {
+            "appels": 2,
+            "echecs": 1,
+            "latence_ms": 20.0,
+            "appels_externes": 2,
+            "anomalies": 0,
+        }
     }
 
 

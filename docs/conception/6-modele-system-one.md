@@ -13,14 +13,27 @@ Ces chiffres sont ceux de l'éditeur : ils restent à vérifier par notre benchm
 
 ## Où il a sa place chez Kaldera
 
-La règle : un modèle n'intervient que là où **le champ des possibles est défini** et où **une règle écrite à la main serait fragile**. Il ne décide jamais seul : une confiance trop basse donne `indetermine`, qui mène à une escalade motivée.
+La règle : un modèle n'intervient que là où **le champ des possibles est défini** et où **une règle écrite à la main serait fragile**. Il ne décide jamais seul : une confiance trop basse donne `indetermine`. Pour un agent, `indetermine` mène à une escalade motivée ; pour la revue de fond, ce n'est qu'un signal.
 
-| Usage | Sorties possibles | Effet |
-|---|---|---|
-| **Contrôle de fond du superviseur** | `conforme`, `anomalie`, `indetermine` + confiance | Une anomalie est **signalée** dans la trace et les métriques. Elle ne change aucune valeur : en cas de désaccord, le sous-agent a raison. |
-| **Cohérence des pièces avec la déclaration** ([§5, L100-101](../specs_metier.md#L100-L101)) | `coherent`, `incoherent`, `indetermine` + confiance | Sous le seuil de confiance → escalade `gestionnaire` |
+| Usage | Sorties possibles | Effet | État |
+|---|---|---|---|
+| **Contrôle de fond du superviseur** | `conforme`, `anomalie`, `indetermine` + confiance | Une anomalie est **signalée** dans la trace et les métriques. Elle ne change aucune valeur : en cas de désaccord, le sous-agent a raison. | Point d'extension codé, en **hypothèse** (voir plus bas) |
+| **Cohérence des pièces avec la déclaration** ([§5, L100-101](../specs_metier.md#L100-L101)) | `coherent`, `incoherent`, `indetermine` + confiance | Sous le seuil de confiance → escalade `gestionnaire` | Non implémenté |
 
-**C'est ici que le seuil de confiance prend son sens.** Une confiance qu'un LLM s'attribue à lui-même n'est pas fiable. Une confiance **calibrée** l'est par construction. Le seuil sera fixé par l'épreuve, puis consigné au journal.
+**C'est ici que le seuil de confiance prend son sens.** Une confiance qu'un LLM s'attribue à lui-même n'est pas fiable. Une confiance **calibrée** l'est par construction. Le seuil vaut 0,8 par défaut (`KALDERA_SEUIL_CONFIANCE`). Il reste à fixer par l'épreuve, puis à consigner au journal.
+
+## Le point d'extension `system_one`
+
+Avec `KALDERA_REVUE=system_one`, la revue de fond passe par la classe `RevueSystemOne` ([revue.py:371-444](../../src/kaldera/revue.py#L371-L444)). **C'est une hypothèse** : aucun service réel n'est branché, et le contrat d'appel est supposé, à confirmer avec l'éditeur.
+
+| Élément | Contrat supposé |
+|---|---|
+| Requête | `POST` sur `KALDERA_SYSTEM_ONE_URL`, en-tête `Authorization: Bearer` avec `KALDERA_SYSTEM_ONE_CLE` ; corps `{tache, section, valeur, sorties}`, où `valeur` est la section réduite à sa liste blanche |
+| Réponse | `{statut, confiance}` : `statut` parmi `conforme`, `anomalie`, `indetermine` ; `confiance` entre 0 et 1 |
+| Seuil | Confiance sous `KALDERA_SEUIL_CONFIANCE` → `indetermine` |
+| Délai | 1 s ; toute erreur, réponse illisible ou URL absente → `indisponible` |
+
+Sans URL, chaque examen rend `indisponible` : le traitement continue, l'issue ne change pas.
 
 ## Où il est exclu
 
@@ -32,14 +45,14 @@ La règle : un modèle n'intervient que là où **le champ des possibles est dé
 ## Les conditions d'intégration
 
 - **Facultatif** : comme le LLM, il n'est jamais nécessaire pour passer les tests.
-- **Données minimisées** : envoyer des données à un fournisseur de modèle, c'est les faire sortir de Kaldera. On applique le même filtre que pour le partenaire : pas de données personnelles, pas de description libre.
-- **Benchmark comparatif** sur les 28 scénarios rejoués 5 fois :
+- **Données minimisées** : envoyer des données à un fournisseur de modèle, c'est les faire sortir de Kaldera. On applique le même principe que pour le partenaire : une liste blanche par section ([revue.py:50-66](../../src/kaldera/revue.py#L50-L66)), pas de données personnelles, pas de description libre.
+- **Benchmark comparatif** sur les 28 scénarios rejoués 5 fois. À ce jour, seule la référence est mesurée :
 
-| Option du superviseur | Mesures |
-|---|---|
-| Sans modèle (gabarits seuls) | Référence |
-| LLM (Kimi-K2.6) | Latence, coût, stabilité, anomalies détectées |
-| Modèle System One (Jev) | Mêmes mesures, plus la calibration de la confiance |
+| Option du superviseur (`KALDERA_REVUE`) | Mesures | État au 9 octobre 2026 |
+|---|---|---|
+| Sans modèle (`regles`) | Référence | Mesurée sur 3 rejeux : 28/28 conformes et stables, 0 anomalie sur 348 examens, durée médiane d'un examen 0,5 ms (mesure locale) |
+| LLM (`llm`, Kimi-K2.6) | Latence, coût, stabilité, anomalies détectées | Non mesuré |
+| Modèle System One (`system_one`, Jev) | Mêmes mesures, plus la calibration de la confiance | Non mesuré : aucun service branché |
 
 ## Points de vigilance
 

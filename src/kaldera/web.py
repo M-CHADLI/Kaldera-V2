@@ -2,8 +2,13 @@
 
     uv run uvicorn kaldera.web:app --port 8000      (ou : make web)
 
-Le pilotage du partenaire passe par les routes ``/_sim/*`` du banc de simulation : il ne
-fonctionne qu'avec le partenaire simulé (external_agent), jamais avec le service réel.
+La console détecte le partenaire branché sur ``PARTENAIRE_URL`` :
+
+- **simulé** (external_agent) : il expose le banc ``/_sim/*``, que la console utilise pour le
+  remettre à zéro et lui imposer un comportement avant chaque rejeu ;
+- **réel** (partenaire_antifraude, Cloud Run) : il n'expose que les routes du contrat. Aucun
+  réglage n'est tenté ; seul le rejeu tel que prévu par le scénario est permis, et un second
+  rejeu du même scénario déclenche le doublon (-32029), donc le mode dégradé.
 """
 
 from __future__ import annotations
@@ -13,7 +18,7 @@ import os
 import time
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from fastapi import Body, FastAPI, HTTPException
@@ -26,6 +31,12 @@ RACINE = Path(__file__).resolve().parents[2]
 PAGE = Path(__file__).with_name("console.html")
 MODES = ("scenario", "normal", "lent", "invalide", "panne")
 RUBRIQUES = ("reference", "assure", "contrat", "sinistre")
+# Sondes de détection : le banc de simulation, puis les routes du contrat (/health en v2.1).
+SONDE_SIMULATION = "/_sim/etat"
+SONDES_CONTRAT = ("/health", "/.well-known/agent.json")
+DELAI_SONDE_S = 3.0  # laisse le temps à un service Cloud Run de sortir de veille
+
+TypePartenaire = Literal["simulé", "réel"]
 
 app = FastAPI(title="Kaldera V2 · console", version="0.4.0")
 
@@ -42,6 +53,60 @@ def regler_partenaire(reglage: dict[str, Any]) -> None:
     with httpx.Client(base_url=url_partenaire(), timeout=3.0) as client:
         client.post("/_sim/reset").raise_for_status()
         client.post("/_sim/mode", json=reglage).raise_for_status()
+
+
+def _sonder(url: str) -> int | None:
+    """Code HTTP renvoyé par ``url``, ou None si personne ne répond."""
+    try:
+        return httpx.get(url, timeout=DELAI_SONDE_S).status_code
+    except httpx.HTTPError:
+        return None
+
+
+def type_partenaire() -> TypePartenaire | None:
+    """Type du partenaire branché sur ``PARTENAIRE_URL`` ; None s'il est injoignable.
+
+    Simulé s'il expose le banc ``/_sim/etat`` ; réel s'il répond sur ``/health`` ou sur son
+    Agent Card. Un hôte muet dès la première sonde n'est pas interrogé davantage.
+    """
+    base = url_partenaire()
+    statut = _sonder(f"{base}{SONDE_SIMULATION}")
+    if statut is None:
+        return None
+    if statut == 200:
+        return "simulé"
+    if any(_sonder(f"{base}{route}") == 200 for route in SONDES_CONTRAT):
+        return "réel"
+    return None
+
+
+def preparer_partenaire(
+    type_: TypePartenaire | None, scenario: dict[str, Any], mode: str
+) -> dict[str, Any] | None:
+    """Prépare le partenaire avant un rejeu ; renvoie le réglage appliqué (None : aucun)."""
+    if type_ is None:
+        raise HTTPException(
+            502,
+            f"Partenaire injoignable ({url_partenaire()}) : lancez « make partenaire » "
+            "ou « make up », ou vérifiez PARTENAIRE_URL.",
+        )
+    if type_ == "réel":
+        # Le service réel n'a pas de banc /_sim : rien à régler, rien à remettre à zéro.
+        if mode != "scenario":
+            raise HTTPException(
+                409,
+                f"Partenaire réel : impossible de forcer le mode « {mode} » sur le service "
+                "réel. Rejouez avec le comportement prévu par le scénario.",
+            )
+        return None
+    reglage: dict[str, Any] = scenario["partenaire"] if mode == "scenario" else {"mode": mode}
+    try:
+        regler_partenaire(reglage)
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            502, "Partenaire simulé injoignable : lancez « make partenaire » ou « make up »."
+        ) from exc
+    return reglage
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -70,12 +135,13 @@ def lire_bornes() -> dict[str, Any]:
 
 @app.get("/api/sante")
 def sante() -> dict[str, Any]:
-    try:
-        httpx.get(f"{url_partenaire()}/_sim/etat", timeout=1.0).raise_for_status()
-        partenaire = "en ligne"
-    except httpx.HTTPError:
-        partenaire = "injoignable"
-    return {"kaldera": "ok", "partenaire": partenaire, "url_partenaire": url_partenaire()}
+    type_ = type_partenaire()
+    return {
+        "kaldera": "ok",
+        "partenaire": "injoignable" if type_ is None else "en ligne",
+        "type": type_,
+        "url_partenaire": url_partenaire(),
+    }
 
 
 @app.post("/api/scenarios/{identifiant}/rejouer")
@@ -85,17 +151,13 @@ def rejouer(identifiant: str, mode: str = "scenario") -> dict[str, Any]:
         raise HTTPException(404, f"scénario inconnu : {identifiant}")
     if mode not in MODES:
         raise HTTPException(422, f"mode inconnu : {mode} (attendu : {', '.join(MODES)})")
-    reglage = scenario["partenaire"] if mode == "scenario" else {"mode": mode}
-    try:
-        regler_partenaire(reglage)
-    except httpx.HTTPError as exc:
-        raise HTTPException(
-            502, "Partenaire simulé injoignable : lancez « make partenaire » ou « make up »."
-        ) from exc
+    type_ = type_partenaire()
+    reglage = preparer_partenaire(type_, scenario, mode)
     debut = time.perf_counter()
     resultat = traiter_lot(scenario["demandes"])
     return {
         "scenario": {k: scenario[k] for k in ("id", "categorie", "titre")},
+        "type_partenaire": type_,
         "reglage": reglage,
         "duree_s": round(time.perf_counter() - debut, 2),
         "fiches": resultat["fiches"],

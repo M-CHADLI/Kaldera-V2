@@ -51,6 +51,8 @@
   .btn { background: var(--accent); color: var(--bg); border: 0; border-radius: 3px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
   .btn:disabled { opacity: .5; cursor: progress; }
   select { background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 8px; }
+  select:disabled { opacity: .6; cursor: not-allowed; }
+  .note { margin: -6px 0 18px; padding: 10px 14px; border-left: 3px solid var(--esc); background: var(--esc-soft); border-radius: 3px; font-size: 14px; }
   .fiche { background: var(--card); border: 1px solid var(--line); border-radius: 4px; margin-bottom: 14px; }
   .fiche-tete { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--line); }
   .fiche-tete .ref { font: 700 14px var(--mono); }
@@ -84,7 +86,7 @@
   </aside>
   <section>
     <h1 id="titre">Choisissez un scénario</h1>
-    <p class="sous" id="sous">Rejouez un scénario de recette contre le partenaire simulé, puis lisez les fiches, les rapports et les traces.</p>
+    <p class="sous" id="sous">Rejouez un scénario de recette contre le partenaire anti-fraude, puis lisez les fiches, les rapports et les traces.</p>
     <div class="actions">
       <label for="mode">Partenaire</label>
       <select id="mode">
@@ -97,6 +99,7 @@
       <button class="btn" id="rejouer" disabled>Rejouer</button>
       <span id="etat" class="sous" style="margin:0"></span>
     </div>
+    <p class="note" id="note-reel" hidden><b>Partenaire réel.</b> On ne peut pas forcer une panne, une lenteur ou une réponse invalide sur le service réel : il répond tel qu'il est, et les scénarios qui prévoient un partenaire défaillant peuvent s'écarter de l'attendu. Le service n'évalue chaque dossier qu'une fois : un second rejeu du même scénario déclenche le doublon (-32029), donc un avis indisponible et le mode dégradé.</p>
     <div id="resultats"><div class="vide">Aucun scénario rejoué pour l'instant.</div></div>
     <h2>Métriques par agent</h2>
     <div id="metriques" class="vide">Elles apparaissent après un premier rejeu.</div>
@@ -123,7 +126,7 @@ function carte(f, attendu, conforme, i) {
   if (f.arret) badges.push(`<span class="pill open">arrêt · ${esc(f.arret.borne)}</span>`);
   if (f.avis_fraude) badges.push(`<span class="pill">avis ${esc(f.avis_fraude.niveau)} · ${f.avis_fraude.score}</span>`);
   if (conforme !== undefined) badges.push(`<span class="pill ${conforme ? "ok" : "ko"}">${conforme ? "conforme à l'attendu" : "écart à l'attendu"}</span>`);
-  const trace = f.trace.map((e, n) => `<tr><td class="num">${n + 1}</td><td>${esc(e.agent)}</td><td>${esc(e.action)}</td><td>${esc(e.ecrit.join(", ") || "—")}</td><td>${esc(e.statut)}</td><td class="num">${e.duree_ms}</td></tr>`).join("");
+  const trace = f.trace.map((e, n) => `<tr><td class="num">${n + 1}</td><td>${esc(e.agent)}</td><td>${esc(e.action)}</td><td>${esc(e.ecrit.join(", ") || "—")}</td><td>${esc(e.statut)}</td><td>${e.revue ? esc(e.revue.statut) + (e.revue.statut === "conforme" ? "" : " · " + esc(e.revue.raison)) : "—"}</td><td class="num">${e.duree_ms}</td></tr>`).join("");
   return `<article class="fiche">
     <div class="fiche-tete"><span class="ref">${esc(f.reference)}</span>${badges.join("")}<span class="montant">${euros(f.montant_rembourse)}</span></div>
     <div class="motif">${esc(f.motif)}</div>
@@ -134,7 +137,7 @@ function carte(f, attendu, conforme, i) {
     </div>
     <pre id="g${i}">${esc(f.rapport)}</pre>
     <pre id="a${i}" hidden>${esc(f.rapport_assure)}</pre>
-    <div id="t${i}" hidden><table><tr><th>#</th><th>Agent</th><th>Action</th><th>Écrit</th><th>Statut</th><th>ms</th></tr>${trace}</table></div>
+    <div id="t${i}" hidden><table><tr><th>#</th><th>Agent</th><th>Action</th><th>Écrit</th><th>Statut</th><th>Revue de fond</th><th>ms</th></tr>${trace}</table></div>
   </article>`;
 }
 
@@ -147,9 +150,9 @@ function brancherOnglets(racine) {
 }
 
 function afficherMetriques(m) {
-  const lignes = Object.entries(m).map(([agent, s]) => `<tr><td>${esc(agent)}</td><td class="num">${s.appels}</td><td class="num">${s.echecs}</td><td class="num">${s.latence_ms}</td><td class="num">${s.appels_externes}</td></tr>`).join("");
+  const lignes = Object.entries(m).map(([agent, s]) => `<tr><td>${esc(agent)}</td><td class="num">${s.appels}</td><td class="num">${s.echecs}</td><td class="num">${s.latence_ms}</td><td class="num">${s.appels_externes}</td><td class="num">${s.anomalies ?? 0}</td></tr>`).join("");
   $("metriques").className = "";
-  $("metriques").innerHTML = `<table><tr><th>Agent</th><th>Appels</th><th>Échecs</th><th>Latence (ms)</th><th>Appels externes</th></tr>${lignes}</table>`;
+  $("metriques").innerHTML = `<table><tr><th>Agent</th><th>Appels</th><th>Échecs</th><th>Latence (ms)</th><th>Appels externes</th><th>Anomalies</th></tr>${lignes}</table>`;
 }
 
 function afficherListe() {
@@ -181,7 +184,21 @@ async function rejouer() {
     afficherMetriques(corps.metriques);
   } catch (e) {
     $("etat").innerHTML = `<span class="erreur">${esc(e.message)}</span>`;
+    verifierSante().catch(() => {});  // le partenaire a pu changer depuis le chargement
   } finally { $("rejouer").disabled = false; }
+}
+
+// Partenaire réel : aucun réglage possible, le sélecteur est figé et la note s'affiche.
+async function verifierSante() {
+  const s = await (await fetch("/api/sante")).json();
+  const reel = s.type === "réel";
+  $("sante").textContent = `partenaire${s.type ? " " + s.type : ""} : ${s.partenaire}`;
+  $("sante").className = `pill ${s.partenaire === "en ligne" ? "ok" : "ko"}`;
+  $("sante").title = s.url_partenaire;
+  if (reel) $("mode").value = "scenario";
+  $("mode").disabled = reel;
+  $("mode").options[0].textContent = reel ? "service réel, sans réglage" : "comportement prévu par le scénario";
+  $("note-reel").hidden = !reel;
 }
 
 async function soumettre() {
@@ -199,10 +216,8 @@ async function demarrer() {
   afficherListe();
   const b = await (await fetch("/api/bornes")).json();
   $("bornes").textContent = `bornes : ${b.etapes_max} étapes · ${b.duree_max_s} s · ${b.complements_max} compléments · partenaire ${b.delai_partenaire_s} s`;
-  const s = await (await fetch("/api/sante")).json();
-  $("sante").textContent = `partenaire : ${s.partenaire}`;
-  $("sante").className = `pill ${s.partenaire === "en ligne" ? "ok" : "ko"}`;
   $("json").value = JSON.stringify({reference: "KAL-26-9001", assure: {id_client: "C-000", nom: "Exemple", prenom: "Anne", email: "anne@example.org", telephone: "0600000000", iban: "FR7600000000000000000000000", adresse: "1 rue de l'Exemple", code_postal: "69003"}, contrat: {numero: "H-000", formule: "confort", date_souscription: "2021-01-15", statut: "actif", cotisations_a_jour: true}, sinistre: {type: "degat_des_eaux", date_survenance: "2026-09-01", date_declaration: "2026-09-03", montant_declare: 1800.0, description: "Fuite sous l'évier"}, pieces: [{type: "facture", lisible: true, montant: 1800.0}, {type: "photo", lisible: true}], historique: {sinistres_12_mois: 0}, espace_assure: {depots: []}}, null, 2);
+  await verifierSante();  // la sonde peut attendre un service en veille : en dernier
 }
 
 $("rejouer").addEventListener("click", rejouer);

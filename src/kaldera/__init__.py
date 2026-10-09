@@ -5,7 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from . import metriques
+from . import historique, metriques
 from .bornes import BORNES, bornes
 from .partenaire import ClientPartenaire
 from .superviseur import Superviseur
@@ -18,8 +18,10 @@ MAX_DEMANDES_EN_PARALLELE = 8
 def traiter_demande(
     demande: dict[str, Any], *, partenaire_url: str | None = None
 ) -> dict[str, Any]:
-    """Traite une demande et retourne sa fiche de décision."""
-    return Superviseur(partenaire_url).traiter(demande)
+    """Traite une demande et retourne sa fiche de décision, versée à l'historique."""
+    fiche = Superviseur(partenaire_url).traiter(demande)
+    historique.enregistrer(demande, fiche)
+    return fiche
 
 
 def traiter_lot(
@@ -36,7 +38,9 @@ def traiter_lot(
     )
 
     def traiter(demande: dict[str, Any]) -> dict[str, Any]:
-        return Superviseur(partenaire_url, client=client).traiter(demande)
+        fiche = Superviseur(partenaire_url, client=client).traiter(demande)
+        historique.enregistrer(demande, fiche)
+        return fiche
 
     if not demandes:
         return {"fiches": [], "metriques": {}}

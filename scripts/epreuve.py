@@ -67,6 +67,7 @@ def rejouer(url: str, scenario: dict[str, Any]) -> dict[str, Any]:
         "duree_lot_s": round(duree, 2),
         "appels_externes": sum(m["appels_externes"] for m in metriques.values()),
         "echecs": sum(m["echecs"] for m in metriques.values()),
+        "anomalies": sum(m.get("anomalies", 0) for m in metriques.values()),
         "arrets": ", ".join(sorted({f["arret"]["borne"] for f in fiches if f["arret"]})) or "—",
         "issues": " · ".join(
             f"{f['issue']}{'/' + str(f['file']) if f['file'] else ''}"
@@ -92,8 +93,8 @@ def main() -> None:
         f"# Résultats d'épreuve · bornes {kaldera.bornes()}",
         "",
         "| Scénario | Conforme | Stable | Étapes max | Durée du lot (s) | Appels externes"
-        " | Échecs | Arrêts | Issues |",
-        "|---|---|---|---|---|---|---|---|---|",
+        " | Échecs | Anomalies | Arrêts | Issues |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     total_conformes = 0
     for scenario in scenarios:
@@ -105,7 +106,7 @@ def main() -> None:
             f"| {scenario['id']} | {'oui' if all(x['conforme'] for x in mesures) else 'NON'}"
             f" | {'oui' if stable else 'NON'} | {max(x['etapes_max'] for x in mesures)}"
             f" | {max(x['duree_lot_s'] for x in mesures)} | {m['appels_externes']}"
-            f" | {m['echecs']} | {m['arrets']} | {m['issues']} |"
+            f" | {m['echecs']} | {m['anomalies']} | {m['arrets']} | {m['issues']} |"
         )
     lignes += ["", f"**{total_conformes} scénarios conformes sur {len(scenarios)}.**"]
     texte = "\n".join(lignes)

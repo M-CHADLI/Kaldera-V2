@@ -33,7 +33,7 @@ def pour_gestionnaire(etat: Etat) -> str:
     lignes += _montant(etat.lire("estimation"))
     lignes += _antifraude(etat.lire("avis_fraude"))
     lignes += _decision(issue)
-    lignes += ["", _execution(etat, issue)]
+    lignes += ["", _execution(etat, issue), _revue(etat)]
     return "\n".join(lignes)
 
 
@@ -134,6 +134,34 @@ def _execution(etat: Etat, issue: dict[str, Any]) -> str:
     borne = etat.arret["borne"] if etat.arret else "aucune"
     degrade = "oui" if issue.get("mode_degrade") else "non"
     return f"Exécution : {len(etat.trace)} étape(s) · borne atteinte : {borne} · mode dégradé : {degrade}"
+
+
+def _revue(etat: Etat) -> str:
+    """Revue de fond du superviseur : un signal, sans effet sur l'issue (gestionnaire seul)."""
+    examens = [
+        (etape["ecrit"][0] if etape["ecrit"] else etape["agent"], etape["revue"])
+        for etape in etat.trace
+        if isinstance(etape.get("revue"), dict)
+    ]
+    if not examens:
+        return "Revue de fond : non effectuée."
+    anomalies = [
+        f"{section} : {revue.get('raison') or 'sans précision'}"
+        for section, revue in examens
+        if revue.get("statut") == "anomalie"
+    ]
+    if anomalies:
+        nombre = len(anomalies)
+        accord = "s" if nombre > 1 else ""
+        return (
+            f"Revue de fond : {nombre} anomalie{accord} signalée{accord}"
+            f" ({' ; '.join(anomalies)}) — signal seul : aucune valeur modifiée, issue inchangée."
+        )
+    non_concluants = sum(
+        1 for _, revue in examens if revue.get("statut") in ("indetermine", "indisponible")
+    )
+    suite = f" ({non_concluants} examen(s) non concluant(s))" if non_concluants else ""
+    return f"Revue de fond : aucune anomalie{suite}."
 
 
 def _complements(etat: Etat) -> int:

@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture Kaldera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+  /* Carte zoomable : une toile SVG à zoom sémantique (les détails apparaissent avec le zoom) + un panneau explicatif */
+  :root {
+    --bg: #F4F6F9; --card: #FFFFFF; --ink: #0F172A; --ink2: #475569; --line: #CBD5E1; --grid: #DDE3EC;
+    --ok: #15803D; --ok-s: #DCFCE7; --amb: #B45309; --amb-s: #FEF3C7; --blu: #1D4ED8; --blu-s: #DBEAFE; --mut-s: #E9EDF3;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0B1220; --card: #111A2E; --ink: #E6EBF3; --ink2: #9AA7BB; --line: #334155; --grid: #1B2740;
+      --ok: #4ADE80; --ok-s: rgba(74,222,128,.12); --amb: #FBBF24; --amb-s: rgba(251,191,36,.12);
+      --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B1220; --card: #111A2E; --ink: #E6EBF3; --ink2: #9AA7BB; --line: #334155; --grid: #1B2740;
+    --ok: #4ADE80; --ok-s: rgba(74,222,128,.12); --amb: #FBBF24; --amb-s: rgba(251,191,36,.12);
+    --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); overflow: hidden; }
+  .app { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; padding-inline: 16px; padding-block: 12px; }
+  header { display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; }
+  h1 { font: 700 18px var(--mono); margin: 0; letter-spacing: -.01em; }
+  h1 span { color: var(--ok); }
+  .aide { color: var(--ink2); font-size: 13px; flex: 1 1 280px; min-width: 0; }
+  .barre { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .bt { background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; font: 600 12.5px var(--mono); min-height: 34px; transition: border-color .15s, background-color .15s; }
+  .bt:hover { border-color: var(--ink2); }
+  .bt[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: var(--bg); }
+  .bt.ico { min-width: 34px; font-size: 16px; padding: 4px 8px; }
+  :focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; min-height: 0; }
+  .toile { position: relative; min-height: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--card); overflow: hidden; }
+  svg { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; }
+  svg.pan { cursor: grabbing; }
+  .zoom { position: absolute; left: 10px; bottom: 10px; font: 12px var(--mono); color: var(--ink2); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; pointer-events: none; }
+  .legende { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; font-size: 12px; color: var(--ink2); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; pointer-events: none; max-width: calc(100% - 140px); }
+  .legende i { display: inline-block; width: 12px; height: 10px; border-radius: 2px; border: 1.5px solid; vertical-align: -1px; margin-right: 5px; }
+  .lg-core { background: var(--ok-s); border-color: var(--ok); } .lg-ext { background: var(--amb-s); border-color: var(--amb); }
+  .lg-infra { background: var(--blu-s); border-color: var(--blu); } .lg-opt { border-style: dashed; border-color: var(--ok); }
+  aside { min-height: 0; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--card); padding: 16px; }
+  aside h2 { font: 700 17px var(--mono); margin: 4px 0 6px; letter-spacing: -.01em; }
+  aside p { margin: 8px 0; color: var(--ink2); font-size: 14px; }
+  aside h3 { font: 600 11.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); margin: 16px 0 6px; }
+  .fil { display: flex; flex-wrap: wrap; gap: 4px; font: 12px var(--mono); }
+  .fil button { background: none; border: 0; padding: 0; color: var(--ok); text-decoration: underline; }
+  .fil span { color: var(--ink2); }
+  .tag { display: inline-block; font: 600 11px var(--mono); padding: 2px 7px; border-radius: 3px; border: 1px solid; margin-bottom: 4px; }
+  .tag.core { color: var(--ok); background: var(--ok-s); border-color: var(--ok); } .tag.ext { color: var(--amb); background: var(--amb-s); border-color: var(--amb); }
+  .tag.infra { color: var(--blu); background: var(--blu-s); border-color: var(--blu); } .tag.plain, .tag.user, .tag.chip { color: var(--ink2); background: var(--mut-s); border-color: var(--line); }
+  .tag.opt { color: var(--ok); border-color: var(--ok); border-style: dashed; }
+  .code { font: 12px var(--mono); list-style: none; padding: 0; margin: 0; display: grid; gap: 3px; }
+  .code li { background: var(--mut-s); border-radius: 3px; padding: 3px 7px; overflow-wrap: anywhere; }
+  .kids { display: flex; flex-wrap: wrap; gap: 6px; }
+  .kids button { background: var(--mut-s); border: 1px solid var(--line); border-radius: 3px; padding: 4px 8px; font: 12px var(--mono); }
+  .kids button:hover { border-color: var(--ink2); }
+  ol.guide { padding-left: 18px; margin: 8px 0; color: var(--ink2); font-size: 14px; }
+  ol.guide li { margin: 4px 0; }
+
+  /* Éléments SVG */
+  .box { stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .k-core { fill: var(--ok-s); stroke: var(--ok); } .k-ext { fill: var(--amb-s); stroke: var(--amb); }
+  .k-infra { fill: var(--blu-s); stroke: var(--blu); } .k-plain, .k-chip { fill: var(--card); stroke: var(--line); }
+  .k-opt { fill: var(--card); stroke: var(--ok); stroke-dasharray: 7 5; } .k-user { fill: var(--mut-s); stroke: var(--ink2); }
+  .k-chip.issue { fill: var(--ok-s); stroke: var(--ok); }
+  .blk { cursor: pointer; transition: opacity .25s; }
+  .blk:hover .box { stroke-width: 2.4; }
+  .blk.off { opacity: 0; pointer-events: none; }
+  .blk.sel .box { stroke-width: 3.2; stroke: var(--ink); }
+  .blk .det, .blk .det2 { transition: opacity .25s; } .blk .det.off, .blk .det2.off { opacity: 0; }
+  .tt { fill: var(--ink); font-family: var(--sans); font-weight: 700; } .ts { fill: var(--ink2); font-family: var(--sans); }
+  .td { fill: var(--ink); font-family: var(--sans); } .tm { fill: var(--ink); font-family: var(--mono); font-weight: 600; text-anchor: middle; }
+  .edge { fill: none; stroke: var(--ink2); stroke-width: 1.6; vector-effect: non-scaling-stroke; transition: opacity .25s; }
+  .edge.dash { stroke-dasharray: 6 5; stroke: var(--amb); }
+  .edge.off, .elab.off { opacity: 0; }
+  .elab { font: 600 20px var(--mono); fill: var(--ink2); paint-order: stroke; stroke: var(--card); stroke-width: 6px; transition: opacity .25s; }
+  .ar { fill: var(--ink2); }
+  @media (max-width: 860px) {
+    body { overflow: auto; } .app { height: auto; min-height: 100%; }
+    main { grid-template-columns: 1fr; grid-template-rows: 62vh auto; }
+    aside { max-height: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .blk, .edge, .elab, .det, .det2 { transition: none; } }
+</style>
+
+<div class="app">
+  <header>
+    <h1>KALDERA<span>/</span>architecture</h1>
+    <div class="aide">Molette ou pincement pour zoomer, glisser pour déplacer, clic sur un bloc pour zoomer dessus.</div>
+    <div class="barre" role="toolbar" aria-label="Niveaux de zoom">
+      <button class="bt" data-niv="1">1 · Contexte</button>
+      <button class="bt" data-niv="2">2 · Plateforme</button>
+      <button class="bt" data-niv="3">3 · Moteur</button>
+      <button class="bt" data-niv="4">4 · Détails</button>
+      <button class="bt ico" id="moins" aria-label="Dézoomer">−</button>
+      <button class="bt ico" id="plus" aria-label="Zoomer">+</button>
+      <button class="bt" id="fit">Ajuster</button>
+    </div>
+  </header>
+  <main>
+    <div class="toile" id="toile">
+      <svg id="svg" role="img" aria-label="Carte zoomable de l'architecture Kaldera : utilisateurs, console, moteur d'agents, partenaire anti-fraude et livraison sur Google Cloud"></svg>
+      <div class="zoom" id="zoom">×1,0</div>
+      <div class="legende" aria-hidden="true">
+        <span><i class="lg-core"></i>équipe Kaldera</span><span><i class="lg-ext"></i>partenaire</span>
+        <span><i class="lg-infra"></i>livraison</span><span><i class="lg-opt"></i>facultatif</span>
+      </div>
+    </div>
+    <aside id="panneau" aria-live="polite"></aside>
+  </main>
+</div>
+
+<script>
+(function () {
+  var NS = "http://www.w3.org/2000/svg", WW = 2400, WH = 1500;
+  var $ = function (id) { return document.getElementById(id); };
+  function el(name, attrs, parent) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  var reduit = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- Les blocs : coordonnées absolues dans un monde de 2400 × 1500 ---------- */
+  var BL = [];
+  function b(id, parent, kind, x, y, w, h, title, sub, det, more, desc, code, extra) {
+    var o = { id: id, parent: parent, kind: kind, x: x, y: y, w: w, h: h, title: title, sub: sub,
+              det: det || [], more: more || [], desc: desc, code: code || [], reveal: 1.2, detR: 2.4, moreR: 3.8 };
+    for (var k in (extra || {})) o[k] = extra[k];
+    BL.push(o);
+  }
+
+  b("users", null, "user", 40, 520, 300, 220, "Utilisateurs", "assuré · gestionnaire",
+    ["Assuré : reçoit son rapport", "Gestionnaire : reprend les", "escalades (2 files)", "Formateur : démo en direct"], [],
+    "<p>Trois publics. L'assuré reçoit la version courte du rapport, sans le détail anti-fraude. Le gestionnaire reprend les dossiers escaladés (files <b>gestionnaire</b> et <b>cellule_fraude</b>) avec le rapport complet. Le formateur utilise la console pour la démonstration.</p>",
+    ["src/kaldera/rapport.py"]);
+
+  b("console", null, "core", 440, 100, 1100, 1000, "Console Kaldera", "Cloud Run · europe-west9 · image Docker", [], [],
+    "<p>Le service Kaldera, déployé sur Cloud Run. Il porte l'interface web et le moteur d'équipe, et appelle le partenaire en A2A.</p><p>Il détecte si le partenaire est <b>simulé</b> ou <b>réel</b> et refuse de forcer une panne sur le service réel.</p>",
+    ["src/kaldera/web.py", "Dockerfile", "scripts/deployer_console.sh"], { reveal: 1.2 });
+
+  b("web", "console", "plain", 480, 215, 1020, 110, "Interface web", "FastAPI · console.html",
+    ["Rejouer, régler le partenaire simulé, lire fiches, rapports, traces et métriques"], [],
+    "<p>Console FastAPI : liste des 28 scénarios, rejeu contre le partenaire, réglage du mode du partenaire simulé, fiches, rapports, traces et métriques par agent. Une demande peut aussi être soumise en JSON.</p>",
+    ["src/kaldera/web.py", "src/kaldera/console.html"]);
+
+  b("moteur", "console", "plain", 480, 350, 1020, 540, "Moteur d'équipe", "superviseur-décideur · ordre fixe", [], [],
+    "<p>L'équipe d'agents. Le superviseur-décideur appelle les agents dans un ordre fixe, s'arrête dès qu'une règle du §10 conclut, et est le seul à écrire l'état.</p><p>Chaque demande finit par une décision ou une escalade motivée, jamais par un silence (E1).</p>",
+    ["src/kaldera/superviseur.py", "src/kaldera/__init__.py"], { reveal: 1.8 });
+
+  b("superviseur", "moteur", "core", 510, 455, 300, 200, "Superviseur-décideur", "enchaîne, borne, conclut",
+    ["ordre fixe, un seul écrivain", "contrôle de forme des sorties", "filet : jamais sans issue"],
+    ["bornes : 12 étapes · 8 s", "2 compléments, arrêt si idem", "trace : agent · action · ecrit"],
+    "<p>Enchaîne les agents, vérifie la forme de chaque sortie, applique les bornes et conclut la demande. Il est l'auteur de la section <b>issue</b>.</p><p>Un agent défaillant ou indéterminé, ou une borne atteinte, donne une escalade motivée avec <b>arret</b> rempli.</p>",
+    ["src/kaldera/superviseur.py", "src/kaldera/bornes.py"]);
+
+  b("elig", "moteur", "plain", 860, 450, 290, 90, "Éligibilité", "le contrat couvre-t-il ?", ["écrit : eligibilite"], [],
+    "<p>Le contrat couvre-t-il ce sinistre ? Contrat actif, cotisations à jour, carence de 30 jours, délai de déclaration, garantie de la formule.</p><p>Ne chiffre jamais : le plafond n'est pas son affaire.</p>",
+    ["src/kaldera/agents/eligibilite.py"]);
+  b("pieces", "moteur", "plain", 1180, 450, 290, 90, "Pièces", "présentes et lisibles ?", ["écrit : pieces"], [],
+    "<p>Les pièces exigées sont-elles présentes et lisibles ? Elle <b>demande</b> un complément ; le superviseur l'<b>exécute</b> en lisant le dépôt suivant, au plus 2 fois, et s'arrête si le dépôt est identique.</p>",
+    ["src/kaldera/agents/pieces.py", "src/kaldera/espace_assure.py"]);
+  b("estim", "moteur", "plain", 860, 560, 290, 90, "Estimation", "combien rembourser ?", ["écrit : estimation · plafond"], [],
+    "<p>Combien rembourser ? Montant retenu moins la franchise, puis plafonné par la formule.</p><p><b>Frontière tranchée :</b> le plafond est un montant, donc l'Estimation l'applique et le signale (NOM-05).</p>",
+    ["src/kaldera/agents/estimation.py"]);
+  b("anti", "moteur", "plain", 1180, 560, 290, 90, "Anti-fraude", "consulte le partenaire", ["écrit : avis_fraude · F1 à F4"], [],
+    "<p>Calcule les indicateurs F1 à F4 et, si l'un d'eux est présent, consulte le partenaire. N'émet jamais d'avis lui-même.</p><p>Une réponse invalide, absente ou en doublon donne un avis <b>indisponible</b>.</p>",
+    ["src/kaldera/agents/antifraude.py", "src/kaldera/partenaire.py"]);
+
+  b("etat", "moteur", "plain", 510, 680, 460, 200, "État partagé", "un seul écrivain", [], [],
+    "<p>L'état d'une demande, en mémoire : cinq sections métier plus l'exécution. Les agents n'ont <b>aucun droit d'écriture</b> : ils renvoient un résultat, le superviseur l'enregistre au nom de l'agent. Chaque agent ne lit que sa vue (moindre privilège).</p>",
+    ["src/kaldera/etat.py", "src/kaldera/vues.py"], { reveal: 3.0 });
+
+  var chips = [
+    ["eligibilite", "Résultat de l'éligibilité : éligible ou non, et les conditions du §4 non remplies. Auteur : Éligibilité."],
+    ["pieces", "Pièces conformes ou à redemander, factures lisibles. Plusieurs versions possibles, une par complément, toutes du même auteur."],
+    ["estimation", "Montants justifié, retenu et estimé, franchise, plafond et plafond_applique. Auteur : Estimation."],
+    ["avis_fraude", "non_requis, obtenu (niveau, score, evaluation_id) ou indisponible, avec la couche de rejet. Auteur : Anti-fraude."],
+    ["issue", "La conclusion : décision ou escalade, montant, file, motif, mode dégradé, règle appliquée. Seul le superviseur l'écrit."],
+    ["execution", "Trace en ajout seul (agent, action, ecrit, statut, durée) et borne atteinte (arret). Écrite par le superviseur, hors sections métier."]
+  ];
+  chips.forEach(function (c, i) {
+    b("s_" + c[0], "etat", "chip", 525 + (i % 3) * 145, 780 + Math.floor(i / 3) * 52, 135, 42, c[0], "", [], [],
+      "<p>" + c[1] + "</p>", ["src/kaldera/etat.py"], { cls: c[0] === "issue" ? "issue" : "" });
+  });
+
+  b("decision", "moteur", "plain", 1000, 680, 230, 200, "Règles du §10", "code déterministe",
+    ["1 non éligible : refus", "2 pièces : escalade", "3 montant nul : refus", "4 avis · mode dégradé"], ["5 seuil · 6 acceptée"],
+    "<p>Les six règles du §10, dans l'ordre : la première qui s'applique fixe l'issue.</p><p>Le <b>mode dégradé</b> du §9 en fait partie : partenaire indisponible, au plus 1 500 € la demande continue, au-delà elle part à la cellule anti-fraude.</p>",
+    ["src/kaldera/decision.py"]);
+  b("rapport", "moteur", "plain", 1260, 680, 210, 200, "Rapport", "de décision",
+    ["version gestionnaire", "version assuré", "cite chaque règle"], ["testé, déterministe", "sans donnée perso."],
+    "<p>Un rapport par demande qui motive la décision étape par étape, en citant la règle. Version complète pour le gestionnaire, version courte pour l'assuré.</p><p>Produit sans LLM, à partir de l'état et de la trace.</p>",
+    ["src/kaldera/rapport.py"]);
+
+  b("revue", "console", "opt", 480, 915, 330, 150, "Revue de fond", "signal seul",
+    ["règles par défaut, ou LLM,", "ou System One (hypothèse)"], ["ne modifie jamais une valeur"],
+    "<p>Second regard <b>facultatif</b>, choisi par <b>KALDERA_REVUE</b> : regles (défaut), aucune, llm ou system_one.</p><p>Elle signale, ne décide pas : en cas de désaccord, le sous-agent a raison. Le signal va dans la trace, les métriques et le rapport.</p>",
+    ["src/kaldera/revue.py"]);
+  b("hist", "console", "opt", 830, 915, 340, 150, "Historique", "données neutralisées",
+    ["JSONL en ajout seul", "id_client pseudonymisé (HMAC)"], ["texte libre jamais stocké"],
+    "<p>Historique JSONL en ajout seul, activé par <b>KALDERA_HISTORIQUE</b>. Liste blanche de champs, id_client pseudonymisé par HMAC, aucun texte libre ni donnée personnelle.</p><p>Une erreur d'écriture ne bloque jamais le traitement.</p>",
+    ["src/kaldera/historique.py"]);
+  b("client", "console", "plain", 1190, 915, 310, 150, "Client A2A", "liste blanche · 3 s",
+    ["7 champs, un appel par dossier", "validation en 3 couches"], ["transport → schéma → cohérence"],
+    "<p>Le client A2A ne construit le message que champ par champ (les 7 champs du contrat), n'appelle <b>qu'une fois par dossier</b>, abandonne à 3 s, puis valide la réponse en trois couches.</p><p>Un registre anti-doublon et un disjoncteur sont partagés par les demandes d'un lot.</p>",
+    ["src/kaldera/partenaire.py"]);
+
+  b("part", null, "ext", 1700, 380, 660, 590, "Partenaire anti-fraude", "Cloud Run · notre service A2A", [], [],
+    "<p>Notre propre partenaire anti-fraude, conforme au contrat v2.0, déployé sur Cloud Run. <b>Aucune route de simulation</b> n'y est exposée.</p><p>Une seule instance : son registre « un appel par dossier » vit en mémoire.</p>",
+    ["partenaire_antifraude/app.py", "scripts/deployer_partenaire.sh"], { reveal: 1.2 });
+  b("card", "part", "plain", 1730, 495, 600, 85, "Agent Card", "GET /.well-known/agent.json", [], [],
+    "<p>La carte d'identité de l'agent : son nom, ses compétences (évaluer le risque) et son schéma d'authentification (jeton Bearer).</p>", ["partenaire_antifraude/app.py"]);
+  b("a2a", "part", "plain", 1730, 600, 600, 95, "Endpoint A2A", "POST /a2a · message/send",
+    ["jeton Bearer · erreurs JSON-RPC du contrat"], [],
+    "<p>Reçoit le message JSON-RPC. Sans jeton : 401. Enveloppe illisible : -32700, invalide : -32600, méthode inconnue : -32601.</p>", ["partenaire_antifraude/app.py"]);
+  b("valid", "part", "plain", 1730, 715, 600, 95, "Validation du contrat", "7 champs exacts",
+    ["refuse tout champ en trop, un doublon (-32029)"], [],
+    "<p>Schéma strict : les 7 champs, tous obligatoires, aucun autre (-32602). Un second appel pour le même dossier est refusé (-32029).</p>", ["partenaire_antifraude/app.py"]);
+  b("score", "part", "plain", 1730, 830, 600, 95, "Score explicable", "des règles, pas de boîte noire",
+    ["base 0,06 + 4 indicateurs · niveau selon le score"], [],
+    "<p>Score = 0,06 + le poids de chaque indicateur relevé (montant élevé, sinistre précoce, fréquence élevée, type sensible). Niveau : faible sous 0,40, modéré sous 0,75, élevé au-delà.</p>", ["partenaire_antifraude/app.py"]);
+
+  b("ci", null, "infra", 440, 1200, 1100, 250, "Livraison", "GitHub Actions · Docker · Artifact Registry", [], [],
+    "<p>La CI vérifie la qualité, les tests et un déploiement de test. Le déploiement sur Google Cloud est lancé <b>à la main</b> par les scripts : l'image est construite en local, car Cloud Build n'a pas les droits sur ce projet.</p>",
+    [".github/workflows/ci.yml", "scripts/deployer_*.sh"], { reveal: 1.2 });
+  b("gh", "ci", "plain", 470, 1305, 330, 125, "GitHub Actions", "à chaque push",
+    ["1 qualité · 2 tests ≥ 85 %", "3 déploiement de test"], [],
+    "<p>Trois étapes : ruff et mypy ; tests avec couverture minimale de 85 % et banc d'épreuve ; déploiement de test par Docker Compose avec rejeu de PAN-01. Les preuves d'exécution sont gardées en artefacts.</p>", [".github/workflows/ci.yml"]);
+  b("docker", "ci", "plain", 830, 1305, 330, 125, "Docker local", "image construite ici",
+    ["aucun droit Cloud Build requis"], ["puis poussée au registre"],
+    "<p>L'image est construite sur la machine du développeur puis poussée dans Artifact Registry. Contourne l'absence de droits sur le compte de service de Cloud Build.</p>", ["Dockerfile", "partenaire_antifraude/Dockerfile"]);
+  b("reg", "ci", "plain", 1190, 1305, 320, 125, "Artifact Registry", "dépôt « kaldera »",
+    ["europe-west9 · Paris"], ["une image par déploiement"],
+    "<p>Stocke les images de la console et du partenaire, d'où Cloud Run les déploie. Région europe-west9 (Paris).</p>", ["scripts/deployer_console.sh", "scripts/deployer_partenaire.sh"]);
+
+  /* ---------- Liens ---------- */
+  var ED = [
+    { p: [[340, 630], [440, 630]], l: "HTTPS", lx: 390, ly: 612 },
+    { p: [[1540, 640], [1700, 640]], l: "A2A", lx: 1620, ly: 624, unless: "client", dash: 1 },
+    { p: [[1500, 990], [1620, 990], [1620, 590], [1730, 590]], l: "A2A", lx: 1590, ly: 800, needs: "client", dash: 1 },
+    { p: [[990, 1200], [990, 1100]], l: "déploie", lx: 1006, ly: 1160, anchor: "start" },
+    { p: [[1540, 1330], [2030, 1330], [2030, 970]], l: "déploie", lx: 1790, ly: 1314 },
+    { p: [[800, 1367], [830, 1367]], needs: "gh" }, { p: [[1160, 1367], [1190, 1367]], needs: "gh" },
+    { p: [[810, 550], [860, 550]], needs: "superviseur" },
+    { p: [[660, 655], [660, 680]], needs: "etat" },
+    { p: [[970, 780], [1000, 780]], needs: "decision" }, { p: [[1230, 780], [1260, 780]], needs: "rapport" }
+  ];
+
+  /* ---------- Rendu ---------- */
+  var svg = $("svg"), world, P = {}, view = { x: 0, y: 0, s: 1 }, cw = 800, ch = 600, f = 0.4, sel = null, anim = null;
+  BL.forEach(function (o) { P[o.id] = o; o.kids = []; });
+  BL.forEach(function (o) { if (o.parent) P[o.parent].kids.push(o); o.depth = o.parent ? P[o.parent].depth + 1 : 0; });
+  BL.forEach(function (o) { if (o.depth === undefined) o.depth = 0; });
+
+  var defs = el("defs", {}, svg);
+  var mk = el("marker", { id: "ar", viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "16", markerHeight: "16", markerUnits: "userSpaceOnUse", orient: "auto" }, defs);
+  el("path", { d: "M0,0L10,5L0,10z", "class": "ar" }, mk);
+  var pat = el("pattern", { id: "pts", width: "40", height: "40", patternUnits: "userSpaceOnUse" }, defs);
+  el("circle", { cx: "2", cy: "2", r: "1.6", fill: "var(--grid)" }, pat);
+  world = el("g", {}, svg);
+  el("rect", { x: -600, y: -600, width: WW + 1200, height: WH + 1200, fill: "url(#pts)" }, world);
+
+  var FS = [[40, 22, 46, 76], [30, 19, 35, 61], [26, 17, 30, 53]];
+  BL.forEach(function (o) {
+    var g = el("g", { "class": "blk", "data-id": o.id }, world);
+    el("rect", { x: o.x, y: o.y, width: o.w, height: o.h, rx: o.kind === "chip" ? 8 : 14, "class": "box k-" + o.kind + (o.cls ? " " + o.cls : "") }, g);
+    var chip = o.kind === "chip", fs = FS[Math.min(o.depth, 2)];
+    if (chip) {
+      var t = el("text", { x: o.x + o.w / 2, y: o.y + o.h / 2 + 5, "class": "tm", "font-size": 15 }, g); t.textContent = o.title;
+    } else {
+      var t1 = el("text", { x: o.x + 16, y: o.y + fs[2], "class": "tt", "font-size": fs[0] }, g); t1.textContent = o.title;
+      var t2 = el("text", { x: o.x + 16, y: o.y + fs[3], "class": "ts", "font-size": fs[1] }, g); t2.textContent = o.sub;
+      var d0 = o.depth === 0 ? 106 : o.depth === 1 ? 91 : 82, step = o.depth === 0 ? 24 : 21, fz = o.depth === 0 ? 17 : 16;
+      o.gd = el("g", { "class": "det" }, g); o.gm = el("g", { "class": "det2" }, g);
+      o.det.forEach(function (s, i) { var e = el("text", { x: o.x + 16, y: o.y + d0 + i * step, "class": "td", "font-size": fz }, o.gd); e.textContent = s; });
+      o.more.forEach(function (s, i) { var e = el("text", { x: o.x + 16, y: o.y + d0 + (o.det.length + i) * step, "class": "td", "font-size": fz }, o.gm); e.textContent = s; });
+    }
+    o.g = g;
+  });
+  ED.forEach(function (e) {
+    var d = e.p.map(function (q, i) { return (i ? "L" : "M") + q[0] + " " + q[1]; }).join(" ");
+    e.path = el("path", { d: d, "class": "edge" + (e.dash ? " dash" : ""), "marker-end": "url(#ar)" }, world);
+    if (e.l) { e.txt = el("text", { x: e.lx, y: e.ly, "class": "elab", "text-anchor": e.anchor || "middle" }, world); e.txt.textContent = e.l; }
+  });
+
+  /* ---------- Vue : zoom, déplacement ---------- */
+  function niveau(r) { return r < 1.2 ? 1 : r < 1.8 ? 2 : r < 3.0 ? 3 : 4; }
+  function maj() {
+    world.setAttribute("transform", "translate(" + view.x + " " + view.y + ") scale(" + view.s + ")");
+    var r = view.s / f;
+    BL.forEach(function (o) {
+      o.vis = !o.parent || (P[o.parent].vis && r >= P[o.parent].reveal);
+      o.g.classList.toggle("off", !o.vis);
+      if (o.gd) { o.gd.classList.toggle("off", !(o.vis && r >= o.detR)); o.gm.classList.toggle("off", !(o.vis && r >= o.moreR)); }
+    });
+    ED.forEach(function (e) {
+      var on = (!e.needs || P[e.needs].vis) && (!e.unless || !P[e.unless].vis);
+      e.path.classList.toggle("off", !on); if (e.txt) e.txt.classList.toggle("off", !on);
+    });
+    var n = niveau(r);
+    document.querySelectorAll("[data-niv]").forEach(function (x) { x.setAttribute("aria-pressed", String(+x.dataset.niv === n)); });
+    $("zoom").textContent = "×" + r.toFixed(1).replace(".", ",");
+  }
+  function mesurer() {
+    var rc = svg.getBoundingClientRect(); var r0 = view.s / f;
+    cw = Math.max(200, rc.width); ch = Math.max(200, rc.height);
+    f = Math.min(cw / WW, ch / WH) * 0.96;
+    return r0;
+  }
+  function ajuster(sansAnim) {
+    var s = f; var tx = (cw - WW * s) / 2, ty = (ch - WH * s) / 2;
+    vers(tx, ty, s, sansAnim);
+  }
+  function vers(x, y, s, direct) {
+    if (anim) cancelAnimationFrame(anim);
+    if (direct || reduit) { view.x = x; view.y = y; view.s = s; maj(); return; }
+    var d = { x: view.x, y: view.y, s: view.s }, t0 = performance.now(), dur = 480;
+    (function pas(t) {
+      var k = Math.min(1, (t - t0) / dur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      /* interpolation géométrique de l'échelle : le zoom paraît régulier */
+      var ls = d.s * Math.pow(s / d.s, e);
+      var ex = d.x + (x - d.x) * e, ey = d.y + (y - d.y) * e;
+      view.s = ls; view.x = ex; view.y = ey; maj();
+      if (k < 1) anim = requestAnimationFrame(pas);
+    })(t0);
+  }
+  function borne(s) { return Math.max(f * 0.9, Math.min(f * 9, s)); }
+  function zoomAutour(px, py, facteur) {
+    var s2 = borne(view.s * facteur), k = s2 / view.s;
+    view.x = px - (px - view.x) * k; view.y = py - (py - view.y) * k; view.s = s2; maj();
+  }
+  function centre() { return [(cw / 2 - view.x) / view.s, (ch / 2 - view.y) / view.s]; }
+  function versNiveau(n) {
+    var cible = [1.0, 1.4, 2.6, 4.2][n - 1], c = n === 1 ? [WW / 2, WH / 2] : centre(), s = f * cible;
+    if (n === 1) return ajuster();
+    vers(cw / 2 - c[0] * s, ch / 2 - c[1] * s, s);
+  }
+  function zoomerSur(o) {
+    var plancher = (o.kids.length ? o.reveal : o.detR) * 1.12, ajust = Math.min(cw * 0.78 / o.w, ch * 0.78 / o.h);
+    var s = borne(Math.min(Math.max(ajust, f * plancher), f * 6.5));
+    var cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+    vers(cw / 2 - cx * s, ch / 2 - cy * s, s);
+  }
+
+  /* ---------- Panneau ---------- */
+  var NOMS = { core: "équipe Kaldera", ext: "partenaire", infra: "livraison", plain: "composant", user: "utilisateurs", chip: "section de l'état", opt: "facultatif" };
+  function guide() {
+    $("panneau").innerHTML = "<h2>Comment lire la carte</h2>" +
+      "<p>Une demande de remboursement entre par la <b>console</b>, traverse l'<b>équipe d'agents</b>, consulte au besoin le <b>partenaire anti-fraude</b>, et ressort en décision ou en escalade, avec un rapport.</p>" +
+      "<ol class='guide'><li><b>Contexte</b> : qui parle à qui.</li><li><b>Plateforme</b> : ce qui tourne sur Google Cloud.</li><li><b>Moteur</b> : le superviseur et ses quatre agents.</li><li><b>Détails</b> : bornes, sections de l'état, règles, validation.</li></ol>" +
+      "<p>Cliquez sur un bloc : la carte zoome dessus et ce panneau l'explique, avec les fichiers du code.</p>";
+  }
+  function select(o) {
+    if (sel) P[sel].g.classList.remove("sel");
+    sel = o ? o.id : null;
+    if (!o) return guide();
+    o.g.classList.add("sel");
+    var chemin = [], q = o; while (q) { chemin.unshift(q); q = q.parent ? P[q.parent] : null; }
+    var h = "<div class='fil'>" + chemin.map(function (c, i) {
+      return (i ? "<span>›</span>" : "") + (c === o ? "<span>" + c.title + "</span>" : "<button data-go='" + c.id + "'>" + c.title + "</button>");
+    }).join("") + "</div>";
+    h += "<h2>" + o.title + (o.sub && o.kind !== "chip" ? "" : "") + "</h2><span class='tag " + o.kind + "'>" + NOMS[o.kind] + "</span>";
+    if (o.sub) h += "<p><i>" + o.sub + "</i></p>";
+    h += o.desc;
+    if (o.kids.length) h += "<h3>Contient</h3><div class='kids'>" + o.kids.map(function (k) { return "<button data-go='" + k.id + "'>" + k.title + "</button>"; }).join("") + "</div>";
+    if (o.code.length) h += "<h3>Dans le code</h3><ul class='code'>" + o.code.map(function (c) { return "<li>" + c + "</li>"; }).join("") + "</ul>";
+    $("panneau").innerHTML = h;
+  }
+  function aller(id) { var o = P[id]; select(o); zoomerSur(o); }
+  $("panneau").addEventListener("click", function (e) { var t = e.target.closest("[data-go]"); if (t) aller(t.dataset.go); });
+
+  /* ---------- Entrées : molette, glisser, pincement, clavier ---------- */
+  var ptrs = new Map(), bouge = 0, pincement = 0;
+  function local(e) { var rc = svg.getBoundingClientRect(); return [e.clientX - rc.left, e.clientY - rc.top]; }
+  svg.addEventListener("wheel", function (e) {
+    e.preventDefault(); var p = local(e);
+    zoomAutour(p[0], p[1], Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0018)));
+  }, { passive: false });
+  svg.addEventListener("pointerdown", function (e) {
+    svg.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, local(e)); bouge = 0;
+    if (anim) cancelAnimationFrame(anim);
+    if (ptrs.size === 2) { var v = Array.from(ptrs.values()); pincement = Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]); }
+  });
+  svg.addEventListener("pointermove", function (e) {
+    if (!ptrs.has(e.pointerId)) return;
+    var avant = ptrs.get(e.pointerId), p = local(e); ptrs.set(e.pointerId, p);
+    if (ptrs.size === 1) {
+      view.x += p[0] - avant[0]; view.y += p[1] - avant[1]; bouge += Math.abs(p[0] - avant[0]) + Math.abs(p[1] - avant[1]);
+      if (bouge > 5) svg.classList.add("pan"); maj();
+    } else if (ptrs.size === 2) {
+      var v = Array.from(ptrs.values()), d = Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]);
+      if (pincement > 0) zoomAutour((v[0][0] + v[1][0]) / 2, (v[0][1] + v[1][1]) / 2, d / pincement);
+      pincement = d; bouge = 99;
+    }
+  });
+  function fin(e) {
+    var etaitSeul = ptrs.size === 1; ptrs.delete(e.pointerId); svg.classList.remove("pan");
+    if (ptrs.size < 2) pincement = 0;
+    if (etaitSeul && bouge <= 5 && e.type === "pointerup") {
+      var cible = document.elementFromPoint(e.clientX, e.clientY), bl = cible && cible.closest ? cible.closest(".blk") : null;
+      if (bl && !bl.classList.contains("off")) aller(bl.dataset.id);
+    }
+  }
+  svg.addEventListener("pointerup", fin); svg.addEventListener("pointercancel", fin);
+  svg.addEventListener("dblclick", function (e) { if (!e.target.closest || !e.target.closest(".blk")) { select(null); ajuster(); } });
+  window.addEventListener("keydown", function (e) {
+    if (e.target.tagName === "BUTTON" && e.key !== "+" && e.key !== "-") return;
+    if (e.key === "+" || e.key === "=") zoomAutour(cw / 2, ch / 2, 1.3);
+    else if (e.key === "-") zoomAutour(cw / 2, ch / 2, 1 / 1.3);
+    else if (e.key === "0" || e.key === "Escape") { select(null); ajuster(); }
+  });
+  $("plus").addEventListener("click", function () { zoomAutour(cw / 2, ch / 2, 1.5); });
+  $("moins").addEventListener("click", function () { zoomAutour(cw / 2, ch / 2, 1 / 1.5); });
+  $("fit").addEventListener("click", function () { select(null); ajuster(); });
+  document.querySelectorAll("[data-niv]").forEach(function (x) { x.addEventListener("click", function () { versNiveau(+x.dataset.niv); }); });
+
+  function init() { mesurer(); ajuster(true); guide(); }
+  if (window.ResizeObserver) {
+    var premier = true;
+    new ResizeObserver(function () {
+      var r0 = view.s / f; mesurer();
+      if (premier) { premier = false; ajuster(true); } else { view.s = r0 * f; maj(); }
+    }).observe($("toile"));
+  }
+  init();
+})();
+</script>
+</html>

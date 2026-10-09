@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 import pytest
@@ -16,11 +17,32 @@ from kaldera import cli, web
 from fabrique import demande
 
 client = TestClient(web.app)
+URL_TEST = "http://partenaire.test"
+SIMULE = {"/_sim/etat": 200, "/health": 404, "/.well-known/agent.json": 200}
+REEL = {"/_sim/etat": 404, "/health": 200, "/.well-known/agent.json": 200}
+
+
+def brancher(
+    monkeypatch: pytest.MonkeyPatch, routes: dict[str, int], sondes: list[str] | None = None
+) -> None:
+    """Simule ``httpx.get`` : chaque route connue répond son code, les autres sont muettes."""
+
+    def get(url: str, **_: Any) -> httpx.Response:
+        if sondes is not None:
+            sondes.append(urlsplit(url).path)
+        statut = routes.get(urlsplit(url).path)
+        if statut is None:
+            raise httpx.ConnectError("refus")
+        return httpx.Response(statut)
+
+    monkeypatch.setenv("PARTENAIRE_URL", URL_TEST)
+    monkeypatch.setattr(httpx, "get", get)
 
 
 @pytest.fixture
 def partenaire_simule(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
     reglages: list[dict[str, Any]] = []
+    brancher(monkeypatch, SIMULE)
     monkeypatch.setattr(web, "regler_partenaire", reglages.append)
     return reglages
 
@@ -35,11 +57,14 @@ def test_la_console_et_les_routes_de_lecture() -> None:
 def test_rejouer_un_scenario_compare_a_l_attendu(partenaire_simule: list[dict[str, Any]]) -> None:
     reponse = client.post("/api/scenarios/NOM-02/rejouer").json()
     assert reponse["conformes"] == [True] and partenaire_simule == [{"mode": "normal"}]
+    assert reponse["type_partenaire"] == "simulé" and reponse["reglage"] == {"mode": "normal"}
     client.post("/api/scenarios/NOM-02/rejouer?mode=panne")
     assert partenaire_simule[-1] == {"mode": "panne"}
 
 
-def test_rejouer_signale_les_erreurs(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_rejouer_signale_les_erreurs(
+    monkeypatch: pytest.MonkeyPatch, partenaire_simule: list[dict[str, Any]]
+) -> None:
     assert client.post("/api/scenarios/INCONNU/rejouer").status_code == 404
     assert client.post("/api/scenarios/NOM-02/rejouer?mode=farfelu").status_code == 422
 
@@ -48,6 +73,37 @@ def test_rejouer_signale_les_erreurs(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(web, "regler_partenaire", injoignable)
     assert client.post("/api/scenarios/NOM-02/rejouer").status_code == 502
+    brancher(monkeypatch, {})
+    reponse = client.post("/api/scenarios/NOM-02/rejouer")
+    assert reponse.status_code == 502 and URL_TEST in reponse.json()["detail"]
+
+
+def test_rejouer_avec_un_partenaire_reel_ne_regle_rien(monkeypatch: pytest.MonkeyPatch) -> None:
+    sondes: list[str] = []
+    brancher(monkeypatch, REEL, sondes)
+    reglages: list[dict[str, Any]] = []
+    monkeypatch.setattr(web, "regler_partenaire", reglages.append)
+
+    reponse = client.post("/api/scenarios/NOM-02/rejouer")
+    assert reponse.status_code == 200
+    corps = reponse.json()
+    assert corps["type_partenaire"] == "réel" and corps["reglage"] is None
+    assert corps["conformes"] == [True]
+    # Aucun réglage /_sim : seule la sonde de détection, en lecture, touche le banc.
+    assert reglages == [] and [s for s in sondes if s.startswith("/_sim")] == ["/_sim/etat"]
+
+
+@pytest.mark.parametrize("mode", ["normal", "lent", "invalide", "panne"])
+def test_un_mode_force_est_refuse_avec_un_partenaire_reel(
+    monkeypatch: pytest.MonkeyPatch, mode: str
+) -> None:
+    brancher(monkeypatch, REEL)
+    reglages: list[dict[str, Any]] = []
+    monkeypatch.setattr(web, "regler_partenaire", reglages.append)
+
+    reponse = client.post(f"/api/scenarios/NOM-02/rejouer?mode={mode}")
+    assert reponse.status_code == 409 and reglages == []
+    assert "réel" in reponse.json()["detail"] and mode in reponse.json()["detail"]
 
 
 def test_soumettre_une_demande() -> None:
@@ -59,6 +115,36 @@ def test_soumettre_une_demande() -> None:
 def test_sante_signale_un_partenaire_injoignable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PARTENAIRE_URL", "http://127.0.0.1:9")
     assert client.get("/api/sante").json()["partenaire"] == "injoignable"
+
+
+@pytest.mark.parametrize(
+    ("routes", "partenaire", "type_"),
+    [
+        (SIMULE, "en ligne", "simulé"),
+        ({**SIMULE, "/.well-known/agent.json": 503}, "en ligne", "simulé"),
+        (REEL, "en ligne", "réel"),
+        ({**REEL, "/health": 404}, "en ligne", "réel"),
+        ({"/_sim/etat": 404, "/health": 503, "/.well-known/agent.json": 503}, "injoignable", None),
+        ({}, "injoignable", None),
+    ],
+    ids=["simule", "simule-en-panne", "reel", "reel-sans-health", "reel-en-panne", "muet"],
+)
+def test_sante_detecte_le_type_de_partenaire(
+    monkeypatch: pytest.MonkeyPatch, routes: dict[str, int], partenaire: str, type_: str | None
+) -> None:
+    brancher(monkeypatch, routes)
+    assert client.get("/api/sante").json() == {
+        "kaldera": "ok",
+        "partenaire": partenaire,
+        "type": type_,
+        "url_partenaire": URL_TEST,
+    }
+
+
+def test_un_partenaire_muet_n_est_sonde_qu_une_fois(monkeypatch: pytest.MonkeyPatch) -> None:
+    sondes: list[str] = []
+    brancher(monkeypatch, {}, sondes)
+    assert web.type_partenaire() is None and sondes == ["/_sim/etat"]
 
 
 @pytest.mark.parametrize(
