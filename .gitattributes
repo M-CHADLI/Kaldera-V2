@@ -1,2 +1,6 @@
 # Les scripts shell doivent garder des fins de ligne Unix, même extraits sous Windows.
 *.sh text eol=lf
+
+# Les pièces d'exemple sont binaires : aucune conversion de fin de ligne.
+*.pdf binary
+*.png binary
