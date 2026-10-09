@@ -8,10 +8,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
 <style>
-  /* Carte zoomable : une toile SVG à zoom sémantique (les détails apparaissent avec le zoom) + un panneau explicatif */
+  /* Carte zoomable : une toile SVG à zoom sémantique (les détails apparaissent avec le zoom) + un panneau explicatif.
+     Mode présentation : la carte prend tout l'écran et un bandeau raconte l'étape en cours, exigence par exigence. */
   :root {
     --bg: #F4F6F9; --card: #FFFFFF; --ink: #0F172A; --ink2: #475569; --line: #CBD5E1; --grid: #DDE3EC;
     --ok: #15803D; --ok-s: #DCFCE7; --amb: #B45309; --amb-s: #FEF3C7; --blu: #1D4ED8; --blu-s: #DBEAFE; --mut-s: #E9EDF3;
+    --ombre: rgba(15,23,42,.14);
     --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   }
@@ -19,13 +21,13 @@
     :root:not([data-theme="light"]) {
       --bg: #0B1220; --card: #111A2E; --ink: #E6EBF3; --ink2: #9AA7BB; --line: #334155; --grid: #1B2740;
       --ok: #4ADE80; --ok-s: rgba(74,222,128,.12); --amb: #FBBF24; --amb-s: rgba(251,191,36,.12);
-      --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; color-scheme: dark;
+      --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; --ombre: rgba(0,0,0,.45); color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #0B1220; --card: #111A2E; --ink: #E6EBF3; --ink2: #9AA7BB; --line: #334155; --grid: #1B2740;
     --ok: #4ADE80; --ok-s: rgba(74,222,128,.12); --amb: #FBBF24; --amb-s: rgba(251,191,36,.12);
-    --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; color-scheme: dark;
+    --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; --ombre: rgba(0,0,0,.45); color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -34,7 +36,9 @@
   header { display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; }
   h1 { font: 700 18px var(--mono); margin: 0; letter-spacing: -.01em; }
   h1 span { color: var(--ok); }
-  .aide { color: var(--ink2); font-size: 13px; flex: 1 1 280px; min-width: 0; }
+  .aide { color: var(--ink2); font-size: 14px; flex: 1 1 280px; min-width: 0; }
+  .bt.primaire { background: var(--ok); border-color: var(--ok); color: var(--card); display: inline-flex; align-items: center; gap: 7px; }
+  .bt.primaire svg { width: 11px; height: 11px; fill: currentColor; }
   .barre { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   button { font: inherit; color: inherit; cursor: pointer; }
   .bt { background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; font: 600 12.5px var(--mono); min-height: 34px; transition: border-color .15s, background-color .15s; }
@@ -47,13 +51,16 @@
   svg { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; }
   svg.pan { cursor: grabbing; }
   .zoom { position: absolute; left: 10px; bottom: 10px; font: 12px var(--mono); color: var(--ink2); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; pointer-events: none; }
-  .legende { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; font-size: 12px; color: var(--ink2); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; pointer-events: none; max-width: calc(100% - 140px); }
+  .legende { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; font-size: 13px; color: var(--ink2); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; pointer-events: none; max-width: calc(100% - 140px); }
   .legende i { display: inline-block; width: 12px; height: 10px; border-radius: 2px; border: 1.5px solid; vertical-align: -1px; margin-right: 5px; }
   .lg-core { background: var(--ok-s); border-color: var(--ok); } .lg-ext { background: var(--amb-s); border-color: var(--amb); }
   .lg-infra { background: var(--blu-s); border-color: var(--blu); } .lg-opt { border-style: dashed; border-color: var(--ok); }
   aside { min-height: 0; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--card); padding: 16px; }
   aside h2 { font: 700 17px var(--mono); margin: 4px 0 6px; letter-spacing: -.01em; }
-  aside p { margin: 8px 0; color: var(--ink2); font-size: 14px; }
+  aside p { margin: 8px 0; color: var(--ink2); font-size: 15px; }
+  .exs { display: grid; gap: 4px; margin: 10px 0 4px; }
+  .exi { font: 600 12.5px var(--mono); color: var(--ok); background: var(--ok-s); border-radius: 3px; padding: 3px 8px; }
+  .exi b { font-weight: 700; }
   aside h3 { font: 600 11.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); margin: 16px 0 6px; }
   .fil { display: flex; flex-wrap: wrap; gap: 4px; font: 12px var(--mono); }
   .fil button { background: none; border: 0; padding: 0; color: var(--ok); text-decoration: underline; }
@@ -62,12 +69,30 @@
   .tag.core { color: var(--ok); background: var(--ok-s); border-color: var(--ok); } .tag.ext { color: var(--amb); background: var(--amb-s); border-color: var(--amb); }
   .tag.infra { color: var(--blu); background: var(--blu-s); border-color: var(--blu); } .tag.plain, .tag.user, .tag.chip { color: var(--ink2); background: var(--mut-s); border-color: var(--line); }
   .tag.opt { color: var(--ok); border-color: var(--ok); border-style: dashed; }
-  .code { font: 12px var(--mono); list-style: none; padding: 0; margin: 0; display: grid; gap: 3px; }
+  .code { font: 12.5px var(--mono); list-style: none; padding: 0; margin: 0; display: grid; gap: 3px; }
   .code li { background: var(--mut-s); border-radius: 3px; padding: 3px 7px; overflow-wrap: anywhere; }
   .kids { display: flex; flex-wrap: wrap; gap: 6px; }
   .kids button { background: var(--mut-s); border: 1px solid var(--line); border-radius: 3px; padding: 4px 8px; font: 12px var(--mono); }
   .kids button:hover { border-color: var(--ink2); }
-  ol.guide { padding-left: 18px; margin: 8px 0; color: var(--ink2); font-size: 14px; }
+  ol.guide { padding-left: 18px; margin: 8px 0; color: var(--ink2); font-size: 15px; }
+  kbd { font: 600 12px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; background: var(--mut-s); }
+
+  /* Bandeau du mode présentation : lisible à distance (titre 24 à 36 px, texte 18 à 24 px) */
+  .bandeau { position: absolute; left: 14px; right: 14px; bottom: 14px; display: grid; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 14px 20px 14px; box-shadow: 0 8px 28px var(--ombre); }
+  .prog { height: 4px; background: var(--mut-s); border-radius: 2px; overflow: hidden; }
+  .prog i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .3s; }
+  .b-haut { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 4px; }
+  .kicker { font: 600 clamp(12px, 1vw, 15px) var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .b-ex { display: flex; flex-wrap: wrap; gap: 6px; }
+  .b-ex span { font: 700 clamp(12px, 1vw, 15px) var(--mono); color: var(--ok); background: var(--ok-s); border: 1px solid var(--ok); border-radius: 3px; padding: 1px 8px; }
+  .bandeau h2 { font: 700 clamp(22px, 2.3vw, 36px)/1.2 var(--sans); margin: 0; text-wrap: balance; }
+  .bandeau p { font-size: clamp(17px, 1.55vw, 24px); line-height: 1.45; margin: 0; max-width: 78ch; color: var(--ink2); }
+  .b-nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+  .b-nav .bt { min-height: 44px; font-size: 14px; padding: 8px 14px; }
+  .b-nav .pos { font: 600 14px var(--mono); color: var(--ink2); font-variant-numeric: tabular-nums; margin-inline: 4px auto; }
+  .app.pres main { grid-template-columns: minmax(0, 1fr); }
+  .app.pres aside, .app.pres .aide, .app.pres .zoom { display: none; }
+  .app.pres .legende { top: 10px; bottom: auto; }
   ol.guide li { margin: 4px 0; }
 
   /* Éléments SVG */
@@ -78,6 +103,9 @@
   .k-chip.issue { fill: var(--ok-s); stroke: var(--ok); }
   .blk { cursor: pointer; transition: opacity .25s; }
   .blk:hover .box { stroke-width: 2.4; }
+  .blk:focus { outline: none; }
+  .blk:focus-visible .box { stroke: var(--ok); stroke-width: 4; }
+  .blk.dim { opacity: .2; }
   .blk.off { opacity: 0; pointer-events: none; }
   .blk.sel .box { stroke-width: 3.2; stroke: var(--ink); }
   .blk .det, .blk .det2 { transition: opacity .25s; } .blk .det.off, .blk .det2.off { opacity: 0; }
@@ -93,14 +121,15 @@
     main { grid-template-columns: 1fr; grid-template-rows: 62vh auto; }
     aside { max-height: none; }
   }
-  @media (prefers-reduced-motion: reduce) { .blk, .edge, .elab, .det, .det2 { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .blk, .edge, .elab, .det, .det2, .prog i { transition: none; } }
 </style>
 
-<div class="app">
+<div class="app" id="app">
   <header>
     <h1>KALDERA<span>/</span>architecture</h1>
-    <div class="aide">Molette ou pincement pour zoomer, glisser pour déplacer, clic sur un bloc pour zoomer dessus.</div>
-    <div class="barre" role="toolbar" aria-label="Niveaux de zoom">
+    <div class="aide">Molette ou pincement pour zoomer, glisser pour déplacer, clic (ou <kbd>Tab</kbd> puis <kbd>Entrée</kbd>) sur un bloc pour zoomer dessus.</div>
+    <div class="barre" role="toolbar" aria-label="Présentation et niveaux de zoom">
+      <button class="bt primaire" id="presenter" aria-pressed="false" title="Touche P"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 0.5 9.5 5 1 9.5z"/></svg>Présenter</button>
       <button class="bt" data-niv="1">1 · Contexte</button>
       <button class="bt" data-niv="2">2 · Plateforme</button>
       <button class="bt" data-niv="3">3 · Moteur</button>
@@ -112,12 +141,24 @@
   </header>
   <main>
     <div class="toile" id="toile">
-      <svg id="svg" role="img" aria-label="Carte zoomable de l'architecture Kaldera : utilisateurs, console, moteur d'agents, partenaire anti-fraude et livraison sur Google Cloud"></svg>
+      <svg id="svg" role="group" aria-label="Carte zoomable de l'architecture Kaldera : utilisateurs, console, moteur d'agents, partenaire anti-fraude et livraison sur Google Cloud"></svg>
       <div class="zoom" id="zoom">×1,0</div>
       <div class="legende" aria-hidden="true">
         <span><i class="lg-core"></i>équipe Kaldera</span><span><i class="lg-ext"></i>partenaire</span>
         <span><i class="lg-infra"></i>livraison</span><span><i class="lg-opt"></i>facultatif</span>
       </div>
+      <section class="bandeau" id="bandeau" hidden aria-label="Présentation pas à pas" aria-live="polite">
+        <div class="prog" aria-hidden="true"><i id="prog"></i></div>
+        <div class="b-haut"><span class="kicker" id="b-kicker"></span><span class="b-ex" id="b-ex"></span></div>
+        <h2 id="b-titre"></h2>
+        <p id="b-texte"></p>
+        <div class="b-nav">
+          <button class="bt" id="prec">← Précédent</button>
+          <button class="bt" id="suiv">Suivant →</button>
+          <span class="pos" id="b-pos"></span>
+          <button class="bt" id="quitter">Quitter <kbd>Échap</kbd></button>
+        </div>
+      </section>
     </div>
     <aside id="panneau" aria-live="polite"></aside>
   </main>
@@ -144,7 +185,7 @@
     BL.push(o);
   }
 
-  b("users", null, "user", 40, 520, 300, 220, "Utilisateurs", "assuré · gestionnaire · expert",
+  b("users", null, "user", 30, 520, 320, 220, "Utilisateurs", "assuré · gestionnaire · expert",
     ["Assuré : reçoit son rapport", "Gestionnaire : reprend les", "escalades, examine les photos", "Expert : contrôle les faits"], [],
     "<p>Trois publics. L'assuré reçoit la version courte du rapport, sans le détail anti-fraude. Le gestionnaire reprend les dossiers escaladés (files <b>gestionnaire</b> et <b>cellule_fraude</b>) avec le rapport complet, et <b>examine les photos</b> : le système n'en juge jamais le contenu.</p><p>Un <b>expert d'assurance</b> peut contrôler les faits en cas de besoin. Son retour vers le système (nouveaux constats, nouvelle décision) n'est pas encore branché : c'est une évolution possible.</p>",
     ["src/kaldera/rapport.py"]);
@@ -173,16 +214,16 @@
     "<p>Enchaîne les agents, vérifie la forme de chaque sortie, applique les bornes et conclut la demande. Il est l'auteur de la section <b>issue</b>.</p><p>Un agent défaillant ou indéterminé, ou une borne atteinte, donne une escalade motivée avec <b>arret</b> rempli.</p>",
     ["src/kaldera/superviseur.py", "src/kaldera/bornes.py"]);
 
-  b("elig", "moteur", "plain", 860, 450, 290, 90, "Éligibilité", "le contrat couvre-t-il ?", ["écrit : eligibilite"], [],
+  b("elig", "moteur", "plain", 860, 450, 290, 90, "1 · Éligibilité", "le contrat couvre-t-il ?", ["écrit : eligibilite"], [],
     "<p>Le contrat couvre-t-il ce sinistre ? Contrat actif, cotisations à jour, carence de 30 jours, délai de déclaration, garantie de la formule.</p><p>Ne chiffre jamais : le plafond n'est pas son affaire.</p>",
     ["src/kaldera/agents/eligibilite.py"]);
-  b("pieces", "moteur", "plain", 1180, 450, 290, 90, "Pièces", "présentes et lisibles ?", ["écrit : pieces"], [],
+  b("pieces", "moteur", "plain", 1180, 450, 290, 90, "2 · Pièces", "présentes et lisibles ?", ["écrit : pieces"], [],
     "<p>Les pièces exigées sont-elles présentes et lisibles ? Elle <b>demande</b> un complément ; le superviseur l'<b>exécute</b> en lisant le dépôt suivant, au plus 2 fois, et s'arrête si le dépôt est identique.</p><p><b>Photo</b> : exigée (présence), mais son contenu n'est pas jugé. L'agent la déclare « non analysée » dans sa section, pour que le rapport la signale à un humain.</p>",
     ["src/kaldera/agents/pieces.py", "src/kaldera/espace_assure.py"]);
-  b("estim", "moteur", "plain", 860, 560, 290, 90, "Estimation", "combien rembourser ?", ["écrit : estimation · plafond"], [],
+  b("estim", "moteur", "plain", 860, 560, 290, 90, "3 · Estimation", "combien rembourser ?", ["écrit : estimation · plafond"], [],
     "<p>Combien rembourser ? Montant retenu moins la franchise, puis plafonné par la formule.</p><p><b>Frontière tranchée :</b> le plafond est un montant, donc l'Estimation l'applique et le signale (NOM-05).</p>",
     ["src/kaldera/agents/estimation.py"]);
-  b("anti", "moteur", "plain", 1180, 560, 290, 90, "Anti-fraude", "consulte le partenaire", ["écrit : avis_fraude · F1 à F4"], [],
+  b("anti", "moteur", "plain", 1180, 560, 290, 90, "4 · Anti-fraude", "consulte le partenaire", ["écrit : avis_fraude · F1 à F4"], [],
     "<p>Calcule les indicateurs F1 à F4 et, si l'un d'eux est présent, consulte le partenaire. N'émet jamais d'avis lui-même.</p><p>Une réponse invalide, absente ou en doublon donne un avis <b>indisponible</b>.</p>",
     ["src/kaldera/agents/antifraude.py", "src/kaldera/partenaire.py"]);
 
@@ -255,7 +296,9 @@
 
   /* ---------- Liens ---------- */
   var ED = [
-    { p: [[340, 630], [440, 630]], l: "HTTPS", lx: 390, ly: 612 },
+    { p: [[350, 630], [440, 630]], l: "HTTPS", lx: 395, ly: 612 },
+    { p: [[440, 700], [350, 700]], l: "rapport", lx: 395, ly: 726 },
+    { p: [[980, 270], [1000, 270]], needs: "web" }, { p: [[1250, 325], [1250, 350]], needs: "moteur" },
     { p: [[1540, 640], [1700, 640]], l: "A2A", lx: 1620, ly: 624, unless: "client", dash: 1 },
     { p: [[1500, 990], [1620, 990], [1620, 590], [1730, 590]], l: "A2A", lx: 1590, ly: 800, needs: "client", dash: 1 },
     { p: [[990, 1200], [990, 1100]], l: "déploie", lx: 1006, ly: 1160, anchor: "start" },
@@ -264,6 +307,46 @@
     { p: [[810, 550], [860, 550]], needs: "superviseur" },
     { p: [[660, 655], [660, 680]], needs: "etat" },
     { p: [[970, 780], [1000, 780]], needs: "decision" }, { p: [[1230, 780], [1260, 780]], needs: "rapport" }
+  ];
+
+  /* ---------- Exigences de la direction des opérations (brief) ---------- */
+  var EXIG = {
+    E1: "jamais de blocage silencieux", E2: "un rôle, une frontière", E3: "seules les données du contrat partent",
+    E4: "réponse non conforme rejetée", E5: "mode dégradé du métier", E6: "bornes, métriques, ajustements consignés"
+  };
+  var EX = {
+    users: ["E1"], superviseur: ["E1", "E6"], elig: ["E2"], pieces: ["E2"], estim: ["E2"], anti: ["E2"], etat: ["E2"],
+    decision: ["E1", "E5"], rapport: ["E1"], client: ["E3", "E4", "E5"], part: ["E3", "E4"], ci: ["E6"], gh: ["E6"]
+  };
+
+  /* ---------- Parcours de présentation : une étape = un message, des blocs mis en avant ---------- */
+  var ETAPES = [
+    { k: "Vue d'ensemble", t: "Une demande, une issue, jamais de silence", f: null, ex: ["E1"],
+      x: "Une demande entre par la console, traverse l'équipe d'agents, consulte au besoin le partenaire anti-fraude, puis ressort en décision ou en escalade humaine, toujours avec un rapport." },
+    { k: "Contexte", t: "Trois publics, et l'humain garde la main", f: ["users"], ex: ["E1"],
+      x: "L'assuré reçoit un rapport court. Le gestionnaire reprend les escalades, dans deux files, et examine les photos. Un expert d'assurance peut contrôler les faits." },
+    { k: "Entrée · un plus", t: "Des pièces à une demande validée par un humain", f: ["web", "extraction"], ex: [],
+      x: "Contrat, déclaration, factures, photos et plainte deviennent une demande au format du §3. Je relis la fiche avant tout traitement. Une photo est exigée, mais son contenu n'est jamais jugé par le système." },
+    { k: "Chantier 1 · orchestration", t: "Un superviseur-décideur à ordre fixe", f: ["superviseur"], ex: ["E1", "E6"],
+      x: "Il appelle les agents dans un ordre fixe, vérifie la forme de chaque sortie et s'arrête dès qu'une règle conclut. Bornes : 12 étapes, 8 s, 2 compléments au plus. Un agent en échec donne une escalade motivée." },
+    { k: "Chantier 1 · frontières", t: "Quatre agents, quatre frontières", f: ["elig", "pieces", "estim", "anti"], ex: ["E2"],
+      x: "Chaque agent répond à une seule question, dans cet ordre. Point ambigu de la spec tranché : le plafond est un montant, donc c'est l'Estimation qui l'applique et le signale." },
+    { k: "Chantier 1 · mémoire", t: "Un état partagé, un seul écrivain", f: ["etat"], ex: ["E2", "E6"],
+      x: "Les agents n'écrivent rien : ils renvoient un résultat, que le superviseur enregistre à leur nom. Chaque agent ne lit que sa vue. La trace est en ajout seul." },
+    { k: "Chantier 1 · décision", t: "Des règles en code, un rapport qui motive", f: ["decision", "rapport"], ex: ["E1"],
+      x: "Les six règles du §10 sont du code déterministe : la première qui s'applique fixe l'issue. Le rapport cite chaque règle ; la version de l'assuré omet le détail anti-fraude." },
+    { k: "Chantier 2 · A2A", t: "Le contrat du partenaire, à la lettre", f: ["client"], ex: ["E3", "E4"],
+      x: "Le client n'envoie que les 7 champs du contrat, appelle une seule fois par dossier, abandonne à 3 s et valide la réponse en trois couches : transport, schéma, plausibilité." },
+    { k: "Chantier 2 · mode dégradé", t: "Partenaire en panne : un vrai plan B", f: ["client", "decision"], ex: ["E5"],
+      x: "Sans avis, une demande jusqu'à 1 500 € continue et le rapport le signale ; au-delà, elle part à la cellule anti-fraude. Un disjoncteur évite d'insister pendant un lot." },
+    { k: "Chantier 2 · partenaire", t: "Mon propre partenaire, sur Cloud Run", f: ["part"], ex: ["E3", "E4"],
+      x: "Conforme au contrat v2.0, sans route de simulation, avec un score explicable par règles. Il refuse tout champ en trop et tout second appel pour un même dossier." },
+    { k: "Chantier 2 · épreuve", t: "Éprouvé, mesuré, consigné", f: ["ci"], ex: ["E6"],
+      x: "28 scénarios rejoués 3 fois : 28 conformes sur 28. Latence, échecs et appels externes mesurés par agent. 13 ajustements au journal. 479 tests, 98,77 % de couverture ; la CI bloque sous 85 %." },
+    { k: "Les plus", t: "Un second regard, sans pouvoir de décision", f: ["revue", "hist"], ex: [],
+      x: "La revue de fond signale une incohérence sans jamais modifier une valeur. L'historique ne garde que des données neutralisées : identifiant pseudonymisé, aucun texte libre." },
+    { k: "Limites et suite", t: "Ce qui reste à faire", f: null, ex: [],
+      x: "Console publique sans authentification, jeton à passer dans Secret Manager, registre anti-doublon en mémoire. Ensuite : un modèle de vision qui décrit les photos pour l'humain, sans jamais devenir un critère de décision." }
   ];
 
   /* ---------- Rendu ---------- */
@@ -282,7 +365,7 @@
 
   var FS = [[40, 22, 46, 76], [30, 19, 35, 61], [26, 17, 30, 53]];
   BL.forEach(function (o) {
-    var g = el("g", { "class": "blk", "data-id": o.id }, world);
+    var g = el("g", { "class": "blk", "data-id": o.id, role: "button", tabindex: "-1", "aria-label": o.title + (o.sub ? " : " + o.sub : "") }, world);
     el("rect", { x: o.x, y: o.y, width: o.w, height: o.h, rx: o.kind === "chip" ? 8 : 14, "class": "box k-" + o.kind + (o.cls ? " " + o.cls : "") }, g);
     var chip = o.kind === "chip", fs = FS[Math.min(o.depth, 2)];
     if (chip) {
@@ -310,7 +393,7 @@
     var r = view.s / f;
     BL.forEach(function (o) {
       o.vis = !o.parent || (P[o.parent].vis && r >= P[o.parent].reveal);
-      o.g.classList.toggle("off", !o.vis);
+      o.g.classList.toggle("off", !o.vis); o.g.setAttribute("tabindex", o.vis ? "0" : "-1");
       if (o.gd) { o.gd.classList.toggle("off", !(o.vis && r >= o.detR)); o.gm.classList.toggle("off", !(o.vis && r >= o.moreR)); }
     });
     ED.forEach(function (e) {
@@ -355,11 +438,36 @@
     if (n === 1) return ajuster();
     vers(cw / 2 - c[0] * s, ch / 2 - c[1] * s, s);
   }
+  function hautUtile() { var b = $("bandeau"); return b.hidden ? ch : Math.max(160, ch - b.getBoundingClientRect().height - 14); }
   function zoomerSur(o) {
-    var plancher = (o.kids.length ? o.reveal : o.detR) * 1.12, ajust = Math.min(cw * 0.78 / o.w, ch * 0.78 / o.h);
+    var haut = hautUtile(), plancher = (o.kids.length ? o.reveal : o.detR) * 1.12, ajust = Math.min(cw * 0.78 / o.w, haut * 0.78 / o.h);
     var s = borne(Math.min(Math.max(ajust, f * plancher), f * 6.5));
     var cx = o.x + o.w / 2, cy = o.y + o.h / 2;
-    vers(cw / 2 - cx * s, ch / 2 - cy * s, s);
+    vers(cw / 2 - cx * s, haut / 2 - cy * s, s);
+  }
+  /* Cadre plusieurs blocs (ou toute la carte) au-dessus du bandeau, assez près pour que leurs détails se lisent. */
+  function cadrer(ids, direct) {
+    var x0 = 20, y0 = 80, x1 = WW - 20, y1 = WH - 30, plancher = 0;
+    if (ids) {
+      x0 = y0 = Infinity; x1 = y1 = -Infinity;
+      ids.forEach(function (id) {
+        var o = P[id]; x0 = Math.min(x0, o.x); y0 = Math.min(y0, o.y); x1 = Math.max(x1, o.x + o.w); y1 = Math.max(y1, o.y + o.h);
+        plancher = Math.max(plancher, (o.kids.length ? o.reveal : o.detR) * 1.02);
+      });
+    }
+    var haut = hautUtile(), pad = ids ? 0.9 : 0.97;
+    var s = Math.min(cw * pad / (x1 - x0), haut * pad / (y1 - y0));
+    if (ids) s = Math.min(Math.max(s, f * plancher), f * 6.5);
+    vers(cw / 2 - (x0 + x1) / 2 * s, haut / 2 - (y0 + y1) / 2 * s, s, direct);
+  }
+  /* Met en avant les blocs d'une étape : eux, leurs conteneurs et leur contenu restent nets, le reste s'estompe. */
+  function mettreEnAvant(ids) {
+    var garde = {};
+    (ids || []).forEach(function (id) {
+      var q = P[id]; while (q) { garde[q.id] = 1; q = q.parent ? P[q.parent] : null; }
+      (function desc(o) { garde[o.id] = 1; o.kids.forEach(desc); })(P[id]);
+    });
+    BL.forEach(function (o) { o.g.classList.toggle("dim", !!ids && !garde[o.id]); });
   }
 
   /* ---------- Panneau ---------- */
@@ -368,7 +476,9 @@
     $("panneau").innerHTML = "<h2>Comment lire la carte</h2>" +
       "<p>Une demande de remboursement entre par la <b>console</b>, traverse l'<b>équipe d'agents</b>, consulte au besoin le <b>partenaire anti-fraude</b>, et ressort en décision ou en escalade, avec un rapport.</p>" +
       "<ol class='guide'><li><b>Contexte</b> : qui parle à qui.</li><li><b>Plateforme</b> : ce qui tourne sur Google Cloud.</li><li><b>Moteur</b> : le superviseur et ses quatre agents.</li><li><b>Détails</b> : bornes, sections de l'état, règles, validation.</li></ol>" +
-      "<p>Cliquez sur un bloc : la carte zoome dessus et ce panneau l'explique, avec les fichiers du code.</p>";
+      "<p>Cliquez sur un bloc : la carte zoome dessus et ce panneau l'explique, avec les fichiers du code et les exigences qu'il couvre.</p>" +
+      "<p><b>Présenter</b> (touche <kbd>P</kbd>) lance un parcours en " + ETAPES.length + " étapes. Avancez avec <kbd>→</kbd>, <kbd>Espace</kbd> ou une télécommande, reculez avec <kbd>←</kbd>, quittez avec <kbd>Échap</kbd>.</p>" +
+      "<h3>Exigences du brief</h3><div class='exs'>" + Object.keys(EXIG).map(function (e) { return "<span class='exi'><b>" + e + "</b> · " + EXIG[e] + "</span>"; }).join("") + "</div>";
   }
   function select(o) {
     if (sel) P[sel].g.classList.remove("sel");
@@ -381,12 +491,44 @@
     }).join("") + "</div>";
     h += "<h2>" + o.title + (o.sub && o.kind !== "chip" ? "" : "") + "</h2><span class='tag " + o.kind + "'>" + NOMS[o.kind] + "</span>";
     if (o.sub) h += "<p><i>" + o.sub + "</i></p>";
+    if (EX[o.id]) h += "<div class='exs' aria-label='Exigences du brief'>" + EX[o.id].map(function (e) { return "<span class='exi'><b>" + e + "</b> · " + EXIG[e] + "</span>"; }).join("") + "</div>";
     h += o.desc;
     if (o.kids.length) h += "<h3>Contient</h3><div class='kids'>" + o.kids.map(function (k) { return "<button data-go='" + k.id + "'>" + k.title + "</button>"; }).join("") + "</div>";
     if (o.code.length) h += "<h3>Dans le code</h3><ul class='code'>" + o.code.map(function (c) { return "<li>" + c + "</li>"; }).join("") + "</ul>";
     $("panneau").innerHTML = h;
   }
   function aller(id) { var o = P[id]; select(o); zoomerSur(o); }
+
+  var etape = -1;
+  function ancre(h) { try { history.replaceState(null, "", h || location.pathname + location.search); } catch (e) { /* cadre sans historique */ } }
+  function montrer(n) {
+    etape = Math.max(0, Math.min(ETAPES.length - 1, n));
+    var e = ETAPES[etape];
+    $("b-kicker").textContent = "Étape " + (etape + 1) + " / " + ETAPES.length + " · " + e.k;
+    $("b-ex").innerHTML = e.ex.map(function (x) { return "<span title='" + EXIG[x] + "'>" + x + "</span>"; }).join("");
+    $("b-titre").textContent = e.t;
+    $("b-texte").textContent = e.x;
+    $("b-pos").textContent = (etape + 1) + " / " + ETAPES.length;
+    $("prog").style.width = ((etape + 1) / ETAPES.length * 100) + "%";
+    $("prec").disabled = etape === 0; $("suiv").disabled = etape === ETAPES.length - 1;
+    if (sel) { P[sel].g.classList.remove("sel"); sel = null; }
+    mettreEnAvant(e.f);
+    cadrer(e.f);
+    ancre("#etape-" + (etape + 1));
+  }
+  function presenter(n) {
+    $("app").classList.add("pres"); $("bandeau").hidden = false; $("presenter").setAttribute("aria-pressed", "true");
+    mesurer(); montrer(n || 0);
+  }
+  function quitter() {
+    if (etape < 0) return;
+    etape = -1; $("app").classList.remove("pres"); $("bandeau").hidden = true; $("presenter").setAttribute("aria-pressed", "false");
+    mettreEnAvant(null); mesurer(); select(null); ajuster(); ancre();
+  }
+  $("presenter").addEventListener("click", function () { if (etape < 0) presenter(0); else quitter(); });
+  $("prec").addEventListener("click", function () { montrer(etape - 1); });
+  $("suiv").addEventListener("click", function () { montrer(etape + 1); });
+  $("quitter").addEventListener("click", quitter);
   $("panneau").addEventListener("click", function (e) { var t = e.target.closest("[data-go]"); if (t) aller(t.dataset.go); });
 
   /* ---------- Entrées : molette, glisser, pincement, clavier ---------- */
@@ -418,13 +560,30 @@
     if (ptrs.size < 2) pincement = 0;
     if (etaitSeul && bouge <= 5 && e.type === "pointerup") {
       var cible = document.elementFromPoint(e.clientX, e.clientY), bl = cible && cible.closest ? cible.closest(".blk") : null;
-      if (bl && !bl.classList.contains("off")) aller(bl.dataset.id);
+      if (bl && !bl.classList.contains("off")) { if (etape >= 0) zoomerSur(P[bl.dataset.id]); else aller(bl.dataset.id); }
     }
   }
   svg.addEventListener("pointerup", fin); svg.addEventListener("pointercancel", fin);
   svg.addEventListener("dblclick", function (e) { if (!e.target.closest || !e.target.closest(".blk")) { select(null); ajuster(); } });
+  svg.addEventListener("keydown", function (e) {
+    var bl = e.target.closest && e.target.closest(".blk");
+    if (bl && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); if (etape >= 0) zoomerSur(P[bl.dataset.id]); else aller(bl.dataset.id); }
+  });
   window.addEventListener("keydown", function (e) {
-    if (e.target.tagName === "BUTTON" && e.key !== "+" && e.key !== "-") return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var surBouton = e.target.tagName === "BUTTON";
+    if ((e.key === "p" || e.key === "P") && !surBouton) { e.preventDefault(); if (etape < 0) presenter(0); else quitter(); return; }
+    if (etape >= 0) {
+      var avance = e.key === "ArrowRight" || e.key === "PageDown" || (e.key === " " && !surBouton);
+      var recule = e.key === "ArrowLeft" || e.key === "PageUp" || e.key === "Backspace";
+      if (avance || recule || e.key === "Home" || e.key === "End" || e.key === "Escape") e.preventDefault();
+      if (avance) return montrer(etape + 1);
+      if (recule) return montrer(etape - 1);
+      if (e.key === "Home") return montrer(0);
+      if (e.key === "End") return montrer(ETAPES.length - 1);
+      if (e.key === "Escape") return quitter();
+    }
+    if (surBouton && e.key !== "+" && e.key !== "-") return;
     if (e.key === "+" || e.key === "=") zoomAutour(cw / 2, ch / 2, 1.3);
     else if (e.key === "-") zoomAutour(cw / 2, ch / 2, 1 / 1.3);
     else if (e.key === "0" || e.key === "Escape") { select(null); ajuster(); }
@@ -434,12 +593,19 @@
   $("fit").addEventListener("click", function () { select(null); ajuster(); });
   document.querySelectorAll("[data-niv]").forEach(function (x) { x.addEventListener("click", function () { versNiveau(+x.dataset.niv); }); });
 
-  function init() { mesurer(); ajuster(true); guide(); }
+  function init() {
+    mesurer(); ajuster(true); guide();
+    var m = /^#etape-(\d+)$/.exec(location.hash), b = /^#bloc-([a-z_]+)$/.exec(location.hash);
+    if (m) presenter(+m[1] - 1); else if (b && P[b[1]]) aller(b[1]);
+  }
   if (window.ResizeObserver) {
     var premier = true;
     new ResizeObserver(function () {
       var r0 = view.s / f; mesurer();
-      if (premier) { premier = false; ajuster(true); } else { view.s = r0 * f; maj(); }
+      if (premier) {
+        premier = false;
+        if (etape >= 0) cadrer(ETAPES[etape].f, true); else if (sel) zoomerSur(P[sel]); else ajuster(true);
+      } else { view.s = r0 * f; maj(); }
     }).observe($("toile"));
   }
   init();
