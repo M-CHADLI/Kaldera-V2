@@ -58,6 +58,12 @@
   aside { min-height: 0; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--card); padding: 16px; }
   aside h2 { font: 700 17px var(--mono); margin: 4px 0 6px; letter-spacing: -.01em; }
   aside p { margin: 8px 0; color: var(--ink2); font-size: 15px; }
+  .nat { margin: 10px 0 4px; padding: 8px 12px; border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 4px; background: var(--mut-s); }
+  .nat p { margin: 2px 0; font-size: 14px; color: var(--ink); }
+  .nat.llm { border-left-color: var(--amb); }
+  .tabagent { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+  .tabagent th, .tabagent td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tabagent th { font: 600 11px var(--mono); text-transform: uppercase; color: var(--ink2); }
   .exs { display: grid; gap: 4px; margin: 10px 0 4px; }
   .exi { font: 600 12.5px var(--mono); color: var(--ok); background: var(--ok-s); border-radius: 3px; padding: 3px 8px; }
   .exi b { font-weight: 700; }
@@ -201,7 +207,7 @@
 
   b("extraction", "console", "core", 1000, 215, 500, 110, "Analyse de dossier", "pièces → demande à valider",
     ["PDF lus, photos jamais jugées", "une fiche à relire avant traitement"], ["champs, ou gpt-5.4-mini (facultatif)"],
-    "<p>Transforme les pièces importées (contrat, déclaration, factures, photos, dépôt de plainte, ou un dossier complet en un PDF) en demande au format du §3, plus une <b>fiche à valider</b> avant tout traitement.</p><p>Deux extracteurs derrière une <b>seule validation</b> : la lecture par champs, déterministe (défaut), ou le modèle gpt-5.4-mini, facultatif (<b>KALDERA_EXTRACTION</b>). Le contenu du PDF est une donnée, jamais une consigne ; champ obligatoire absent ou illisible : le traitement est bloqué.</p><p><b>Photos</b> : seule leur présence et leur format (JPEG ou PNG) sont vérifiés, jamais ce qu'elles montrent ; la fiche écrit « jointe, contenu non analysé ». Les 15 dossiers de test de bout en bout, en deux variantes (étiquetée et texte libre), sont dans <b>exemples/cas/</b>.</p>",
+    "<div class='nat llm'><p><b>LLM : gpt-5.4-mini (repli sur du code)</b></p><p>Appels par demande : <b>2 par dossier (contrat, déclaration)</b></p><p>Latence mesurée : <b>3 s à chaud, 14 s à froid</b></p><p>Entrée : pièces PDF et photos importées. Sortie : demande JSON et fiche, validées par un humain.</p></div><p>Transforme les pièces importées (contrat, déclaration, factures, photos, dépôt de plainte, ou un dossier complet en un PDF) en demande au format du §3, plus une <b>fiche à valider</b> avant tout traitement.</p><p>Deux extracteurs derrière une <b>seule validation</b> : la lecture par champs, déterministe (défaut), ou le modèle gpt-5.4-mini, facultatif (<b>KALDERA_EXTRACTION</b>). Le contenu du PDF est une donnée, jamais une consigne ; champ obligatoire absent ou illisible : le traitement est bloqué.</p><p><b>Photos</b> : seule leur présence et leur format (JPEG ou PNG) sont vérifiés, jamais ce qu'elles montrent ; la fiche écrit « jointe, contenu non analysé ». Les 15 dossiers de test de bout en bout, en deux variantes (étiquetée et texte libre), sont dans <b>exemples/cas/</b>.</p>",
     ["src/kaldera/extraction.py", "exemples/cas/", "scripts/generer_cas_exemples.py"]);
 
   b("moteur", "console", "plain", 480, 350, 1020, 540, "Moteur d'équipe", "superviseur-décideur · ordre fixe", [], [],
@@ -211,20 +217,20 @@
   b("superviseur", "moteur", "core", 510, 455, 300, 200, "Superviseur-décideur", "enchaîne, borne, conclut",
     ["ordre fixe, un seul écrivain", "contrôle de forme des sorties", "filet : jamais sans issue"],
     ["bornes : 12 étapes · 8 s", "2 compléments, arrêt si idem", "trace : agent · action · ecrit"],
-    "<p>Enchaîne les agents, vérifie la forme de chaque sortie, applique les bornes et conclut la demande. Il est l'auteur de la section <b>issue</b>.</p><p>Un agent défaillant ou indéterminé, ou une borne atteinte, donne une escalade motivée avec <b>arret</b> rempli.</p>",
+    "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>1 à 2 (moyenne 1,12)</b></p><p>Latence mesurée : <b>0,01 ms</b></p><p>Entrée : la demande validée. Sortie : l'issue et la trace.</p></div><p>Enchaîne les agents, vérifie la forme de chaque sortie, applique les bornes et conclut la demande. Il est l'auteur de la section <b>issue</b>.</p><p>Un agent défaillant ou indéterminé, ou une borne atteinte, donne une escalade motivée avec <b>arret</b> rempli.</p>",
     ["src/kaldera/superviseur.py", "src/kaldera/bornes.py"]);
 
   b("elig", "moteur", "plain", 860, 450, 290, 90, "1 · Éligibilité", "le contrat couvre-t-il ?", ["écrit : eligibilite"], [],
-    "<p>Le contrat couvre-t-il ce sinistre ? Contrat actif, cotisations à jour, carence de 30 jours, délai de déclaration, garantie de la formule.</p><p>Ne chiffre jamais : le plafond n'est pas son affaire.</p>",
+    "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>1, toujours</b></p><p>Latence mesurée : <b>0,03 ms</b></p><p>Entrée : formule, statut, dates, type. Sortie : éligible ou non, avec les motifs.</p></div><p>Le contrat couvre-t-il ce sinistre ? Contrat actif, cotisations à jour, carence de 30 jours, délai de déclaration, garantie de la formule.</p><p>Ne chiffre jamais : le plafond n'est pas son affaire.</p>",
     ["src/kaldera/agents/eligibilite.py"]);
   b("pieces", "moteur", "plain", 1180, 450, 290, 90, "2 · Pièces", "présentes et lisibles ?", ["écrit : pieces"], [],
-    "<p>Les pièces exigées sont-elles présentes et lisibles ? Elle <b>demande</b> un complément ; le superviseur l'<b>exécute</b> en lisant le dépôt suivant, au plus 2 fois, et s'arrête si le dépôt est identique.</p><p><b>Photo</b> : exigée (présence), mais son contenu n'est pas jugé. L'agent la déclare « non analysée » dans sa section, pour que le rapport la signale à un humain.</p>",
+    "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>0 à 2 (moyenne 0,91)</b></p><p>Latence mesurée : <b>0,02 ms</b></p><p>Entrée : type de sinistre, pièces, dates des pièces. Sortie : conformes, à redemander, incohérences.</p></div><p>Les pièces exigées sont-elles présentes et lisibles ? Elle <b>demande</b> un complément ; le superviseur l'<b>exécute</b> en lisant le dépôt suivant, au plus 2 fois, et s'arrête si le dépôt est identique.</p><p><b>Photo</b> : exigée (présence), mais son contenu n'est pas jugé. L'agent la déclare « non analysée » dans sa section, pour que le rapport la signale à un humain.</p>",
     ["src/kaldera/agents/pieces.py", "src/kaldera/espace_assure.py"]);
   b("estim", "moteur", "plain", 860, 560, 290, 90, "3 · Estimation", "combien rembourser ?", ["écrit : estimation · plafond"], [],
-    "<p>Combien rembourser ? Montant retenu moins la franchise, puis plafonné par la formule.</p><p><b>Frontière tranchée :</b> le plafond est un montant, donc l'Estimation l'applique et le signale (NOM-05).</p>",
+    "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>0 à 1 (moyenne 0,76)</b></p><p>Latence mesurée : <b>0,02 ms</b></p><p>Entrée : montant déclaré, factures, formule. Sortie : montant estimé, plafond.</p></div><p>Combien rembourser ? Montant retenu moins la franchise, puis plafonné par la formule.</p><p><b>Frontière tranchée :</b> le plafond est un montant, donc l'Estimation l'applique et le signale (NOM-05).</p>",
     ["src/kaldera/agents/estimation.py"]);
   b("anti", "moteur", "plain", 1180, 560, 290, 90, "4 · Anti-fraude", "consulte le partenaire", ["écrit : avis_fraude · F1 à F4"], [],
-    "<p>Calcule les indicateurs F1 à F4 et, si l'un d'eux est présent, consulte le partenaire. N'émet jamais d'avis lui-même.</p><p>Une réponse invalide, absente ou en doublon donne un avis <b>indisponible</b>.</p>",
+    "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>0 à 1 (moyenne 0,74)</b></p><p>Latence mesurée : <b>0,01 ms sans appel, 37 ms avec</b></p><p>Entrée : montant, dates, historique. Sortie : indicateurs F1 à F4 et avis. Le partenaire est interrogé pour 18 demandes sur 34.</p></div><p>Calcule les indicateurs F1 à F4 et, si l'un d'eux est présent, consulte le partenaire. N'émet jamais d'avis lui-même.</p><p>Une réponse invalide, absente ou en doublon donne un avis <b>indisponible</b>.</p>",
     ["src/kaldera/agents/antifraude.py", "src/kaldera/partenaire.py"]);
 
   b("etat", "moteur", "plain", 510, 680, 460, 200, "État partagé", "un seul écrivain", [], [],
@@ -267,7 +273,7 @@
     ["src/kaldera/partenaire.py"]);
 
   b("part", null, "ext", 1700, 380, 660, 590, "Partenaire anti-fraude", "Cloud Run · notre service A2A", [], [],
-    "<p>Notre propre partenaire anti-fraude, conforme au contrat v2.0, déployé sur Cloud Run. <b>Aucune route de simulation</b> n'y est exposée.</p><p>Une seule instance : son registre « un appel par dossier » vit en mémoire.</p><p>Un <b>journal</b> des derniers échanges montre ce qu'il reçoit et ce qu'il renvoie : <b>GET /journal</b>, protégé par le même jeton, et sa page de consultation à la racine du service. En mémoire, borné, jamais d'en-tête ni de jeton consigné.</p>",
+    "<div class='nat'><p><b>Code déterministe (règles de score)</b></p><p>Appels par demande : <b>1 par dossier, jamais 2</b></p><p>Latence mesurée : <b>0,7 ms côté serveur</b></p><p>Entrée : 7 champs envoyés par Kaldera. Sortie : niveau et score.</p></div><p>Notre propre partenaire anti-fraude, conforme au contrat v2.0, déployé sur Cloud Run. <b>Aucune route de simulation</b> n'y est exposée.</p><p>Une seule instance : son registre « un appel par dossier » vit en mémoire.</p><p>Un <b>journal</b> des derniers échanges montre ce qu'il reçoit et ce qu'il renvoie : <b>GET /journal</b>, protégé par le même jeton, et sa page de consultation à la racine du service. En mémoire, borné, jamais d'en-tête ni de jeton consigné.</p>",
     ["partenaire_antifraude/app.py", "partenaire_antifraude/journal.html", "scripts/deployer_partenaire.sh"], { reveal: 1.2 });
   b("card", "part", "plain", 1730, 495, 600, 85, "Agent Card", "GET /.well-known/agent.json", [], [],
     "<p>La carte d'identité de l'agent : son nom, ses compétences (évaluer le risque) et son schéma d'authentification (jeton Bearer).</p>", ["partenaire_antifraude/app.py"]);
@@ -326,11 +332,11 @@
     { k: "Contexte", t: "Trois publics, et l'humain garde la main", f: ["users"], ex: ["E1"],
       x: "L'assuré reçoit un rapport court. Le gestionnaire reprend les escalades, dans deux files, et examine les photos. Un expert d'assurance peut contrôler les faits." },
     { k: "Entrée · un plus", t: "Des pièces à une demande validée par un humain", f: ["web", "extraction"], ex: [],
-      x: "Contrat, déclaration, factures, photos et plainte deviennent une demande au format du §3. Je relis la fiche avant tout traitement. Une photo est exigée, mais son contenu n'est jamais jugé par le système." },
+      x: "Seul LLM du système : gpt-5.4-mini lit le contrat et la déclaration, 2 appels par dossier, environ 3 s. Je relis la fiche avant tout traitement. Une photo est exigée, mais son contenu n'est jamais jugé." },
     { k: "Chantier 1 · orchestration", t: "Un superviseur-décideur à ordre fixe", f: ["superviseur"], ex: ["E1", "E6"],
       x: "Il appelle les agents dans un ordre fixe, vérifie la forme de chaque sortie et s'arrête dès qu'une règle conclut. Bornes : 12 étapes, 8 s, 2 compléments au plus. Un agent en échec donne une escalade motivée." },
     { k: "Chantier 1 · frontières", t: "Quatre agents, quatre frontières", f: ["elig", "pieces", "estim", "anti"], ex: ["E2"],
-      x: "Chaque agent répond à une seule question, dans cet ordre. Point ambigu de la spec tranché : le plafond est un montant, donc c'est l'Estimation qui l'applique et le signale." },
+      x: "Chaque agent répond à une seule question, dans cet ordre, et c'est du code déterministe : de 0,02 à 0,03 ms par appel, aucun LLM. Point ambigu de la spec tranché : le plafond est un montant, donc l'Estimation l'applique." },
     { k: "Chantier 1 · mémoire", t: "Un état partagé, un seul écrivain", f: ["etat"], ex: ["E2", "E6"],
       x: "Les agents n'écrivent rien : ils renvoient un résultat, que le superviseur enregistre à leur nom. Chaque agent ne lit que sa vue. La trace est en ajout seul." },
     { k: "Chantier 1 · décision", t: "Des règles en code, un rapport qui motive", f: ["decision", "rapport"], ex: ["E1"],
@@ -342,11 +348,11 @@
     { k: "Chantier 2 · partenaire", t: "Mon propre partenaire, sur Cloud Run", f: ["part"], ex: ["E3", "E4"],
       x: "Conforme au contrat v2.0, sans route de simulation, avec un score explicable par règles. Il refuse tout champ en trop et tout second appel pour un même dossier. Un journal protégé montre ce qu'il reçoit et renvoie." },
     { k: "Chantier 2 · épreuve", t: "Éprouvé, mesuré, consigné", f: ["ci"], ex: ["E6"],
-      x: "28 scénarios rejoués 3 fois : 28 conformes sur 28. Latence, échecs et appels externes mesurés par agent. 13 ajustements au journal. 521 tests, 98,82 % de couverture ; la CI bloque sous 85 %." },
+      x: "28 scénarios rejoués 3 fois : 28 conformes sur 28. Latence, échecs et appels externes mesurés par agent. 14 ajustements au journal. 521 tests, 98,82 % de couverture ; la CI bloque sous 85 %." },
     { k: "Les plus", t: "Un second regard, sans pouvoir de décision", f: ["revue", "hist"], ex: [],
       x: "La revue de fond signale une incohérence sans jamais modifier une valeur. L'historique ne garde que des données neutralisées : identifiant pseudonymisé, aucun texte libre." },
     { k: "Limites et suite", t: "Ce qui reste à faire", f: null, ex: [],
-      x: "Console publique sans authentification, jeton à passer dans Secret Manager, registre anti-doublon en mémoire. Ensuite : un modèle de vision qui décrit les photos pour l'humain, sans jamais devenir un critère de décision." }
+      x: "Console publique sans authentification, jeton à passer dans Secret Manager, registre anti-doublon en mémoire, tolérance de 3 jours sur les dates des pièces à valider. Ensuite : un modèle de vision qui décrit les photos pour l'humain, sans jamais devenir un critère de décision." }
   ];
 
   /* ---------- Rendu ---------- */
@@ -478,6 +484,15 @@
       "<ol class='guide'><li><b>Contexte</b> : qui parle à qui.</li><li><b>Plateforme</b> : ce qui tourne sur Google Cloud.</li><li><b>Moteur</b> : le superviseur et ses quatre agents.</li><li><b>Détails</b> : bornes, sections de l'état, règles, validation.</li></ol>" +
       "<p>Cliquez sur un bloc : la carte zoome dessus et ce panneau l'explique, avec les fichiers du code et les exigences qu'il couvre.</p>" +
       "<p><b>Présenter</b> (touche <kbd>P</kbd>) lance un parcours en " + ETAPES.length + " étapes. Avancez avec <kbd>→</kbd>, <kbd>Espace</kbd> ou une télécommande, reculez avec <kbd>←</kbd>, quittez avec <kbd>Échap</kbd>.</p>" +
+      "<h3>Agents : LLM ou code ?</h3><table class='tabagent'><tr><th>Agent</th><th>Nature</th><th>Appels</th><th>Latence</th></tr>" +
+      "<tr><td>Analyse de dossier</td><td><b>LLM</b></td><td>2 / dossier</td><td>3 s</td></tr>" +
+      "<tr><td>Superviseur</td><td>Code</td><td>1 à 2</td><td>0,01 ms</td></tr>" +
+      "<tr><td>1 Éligibilité</td><td>Code</td><td>1</td><td>0,03 ms</td></tr>" +
+      "<tr><td>2 Pièces</td><td>Code</td><td>0 à 2</td><td>0,02 ms</td></tr>" +
+      "<tr><td>3 Estimation</td><td>Code</td><td>0 à 1</td><td>0,02 ms</td></tr>" +
+      "<tr><td>4 Anti-fraude</td><td>Code</td><td>0 à 1</td><td>37 ms</td></tr>" +
+      "<tr><td>Partenaire</td><td>Code</td><td>1 / dossier</td><td>0,7 ms</td></tr></table>" +
+      "<p>Mesuré sur 34 demandes des 28 scénarios. Aucun LLM ne participe à la décision.</p>" +
       "<h3>Exigences du brief</h3><div class='exs'>" + Object.keys(EXIG).map(function (e) { return "<span class='exi'><b>" + e + "</b> · " + EXIG[e] + "</span>"; }).join("") + "</div>";
   }
   function select(o) {
