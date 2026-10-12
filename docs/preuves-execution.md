@@ -78,7 +78,7 @@ Aucun service externe n'est requis : les tests et le banc lancent leur propre pa
 
 Le workflow [ci.yml](../.github/workflows/ci.yml) lance à chaque push la qualité, les tests avec la couverture, le banc d'épreuve et un déploiement de test Docker Compose. Il dépose les preuves en artefact `preuves-execution` (`coverage.xml`, `rapport-tests.xml`, `epreuve-resultats.md`).
 
-Dernier run vert : [run 37917040867](https://github.com/M-CHADLI/Kaldera-V2/actions/runs/37917040867), le 9 octobre 2026, sur le commit `019dcf9`. Les trois jobs sont verts (qualité, tests avec couverture, déploiement de test) : 477 tests et 98,76 % de couverture. **Ce run précède** le changement sur les photos (contenu jamais jugé) et le journal du partenaire : les chiffres de cette page (511 tests, 98,77 %) sont ceux de l'arbre de travail du 9 octobre, et la CI les mesurera au prochain push.
+Dernier run vert : [run 37917040867](https://github.com/M-CHADLI/Kaldera-V2/actions/runs/37917040867), le 9 octobre 2026, sur le commit `019dcf9`. Les trois jobs sont verts (qualité, tests avec couverture, déploiement de test) : 477 tests et 98,76 % de couverture. **Ce run précède** le changement sur les photos (contenu jamais jugé) et le journal du partenaire : les chiffres de cette page (521 tests, 98,82 %) sont ceux de l'arbre de travail du 9 octobre, et la CI les mesurera au prochain push.
 
 ## Environnement Google Cloud
 
