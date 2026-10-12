@@ -124,6 +124,22 @@
   .carte-ag .chiffres span { font: 600 12px var(--mono); padding: 2px 8px; border-radius: 3px; background: var(--mut-s); border: 1px solid var(--line); }
   .nat-chip { font: 700 12px var(--mono); letter-spacing: .06em; padding: 2px 8px; border-radius: 4px; border: 1.5px solid var(--ink2); white-space: nowrap; }
   .nat-chip.llm { border-color: var(--llm); background: var(--llm-s); color: var(--llm); }
+  .chrono { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .chrono h3 { font: 700 17px var(--sans); margin: 0 0 4px; }
+  .chrono .lede { margin: 0 0 12px; font-size: 14px; }
+  .lc-grille { display: grid; gap: 6px; }
+  .lc { display: grid; grid-template-columns: 13em minmax(0, 1fr) 9.5em; align-items: center; gap: 10px; }
+  .lc-nom { font-size: 14px; }
+  .lc-val { font: 600 13px var(--mono); font-variant-numeric: tabular-nums; }
+  .piste { position: relative; height: 18px; border-left: 1px solid var(--ink2); background: repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 1px, transparent 1px, transparent 20%); }
+  .bt-t { position: absolute; top: 3px; height: 12px; min-width: 4px; border-radius: 2px; background: var(--ink2); }
+  .bt-t.ext { background: var(--amb); }
+  .bt-t.llm { background: var(--llm); }
+  .axe { position: relative; height: 18px; border-top: 1px solid var(--line); }
+  .axe span { position: absolute; top: 3px; transform: translateX(-50%); font: 11px var(--mono); color: var(--ink2); white-space: nowrap; }
+  .axe span:first-child { transform: none; }
+  .note-t { margin: 10px 0 0; font-size: 13px; color: var(--ink2); }
+  @media (max-width: 700px) { .lc { grid-template-columns: 8em minmax(0, 1fr); } .lc-val { grid-column: 2; } }
   .autres { margin-top: 20px; padding: 12px 16px; border: 1px dashed var(--line); border-radius: 6px; color: var(--ink2); font-size: 14px; }
   .app.pres main { grid-template-columns: minmax(0, 1fr); }
   .app.pres aside, .app.pres .aide, .app.pres .zoom { display: none; }
@@ -327,6 +343,58 @@
         <div class="chiffres"><span>Appels par demande : 1 par dossier, jamais 2</span><span>Latence : 0,7 ms côté serveur</span></div>
       </article>
     </div>
+    <section class="chrono" aria-labelledby="t-chrono">
+      <h3 id="t-chrono">Une demande de bout en bout : 37,06 ms</h3>
+      <p class="lede">Chronogramme d'une demande qui consulte le partenaire (scénario AF-01, version en ligne). Échelle linéaire : les quatre composants en code tiennent chacun en quelques centièmes de milliseconde, l'appel au partenaire fait presque tout le temps.</p>
+      <div class="lc-grille" role="img" aria-label="Chronogramme : éligibilité 0,02 ms, pièces 0,02 ms, estimation 0,01 ms, anti-fraude avec appel au partenaire 37 ms, superviseur 0,01 ms ; total 37 ms">
+      <div class="lc"><span class="lc-nom">1 · Éligibilité</span>
+        <div class="piste"><i class="bt-t code" style="left:0.000%;width:0.050%"></i></div>
+        <span class="lc-val">0,02 ms</span></div>
+      <div class="lc"><span class="lc-nom">2 · Pièces</span>
+        <div class="piste"><i class="bt-t code" style="left:0.050%;width:0.050%"></i></div>
+        <span class="lc-val">0,02 ms</span></div>
+      <div class="lc"><span class="lc-nom">3 · Estimation</span>
+        <div class="piste"><i class="bt-t code" style="left:0.100%;width:0.025%"></i></div>
+        <span class="lc-val">0,01 ms</span></div>
+      <div class="lc"><span class="lc-nom">4 · Anti-fraude + partenaire</span>
+        <div class="piste"><i class="bt-t ext" style="left:0.125%;width:92.500%"></i></div>
+        <span class="lc-val">37 ms</span></div>
+      <div class="lc"><span class="lc-nom">Superviseur : conclut</span>
+        <div class="piste"><i class="bt-t code" style="left:92.625%;width:0.025%"></i></div>
+        <span class="lc-val">0,01 ms</span></div>
+        <div class="lc"><span class="lc-nom"></span><div class="axe"><span style="left:0.0%">0 ms</span><span style="left:25.0%">10 ms</span><span style="left:50.0%">20 ms</span><span style="left:75.0%">30 ms</span><span style="left:100.0%">40 ms</span></div><span class="lc-val"></span></div>
+      </div>
+      <p class="note-t">Dans les 37 ms de l'anti-fraude, le partenaire traite la demande en 0,7 ms : le reste est du réseau (Cloud Run en Paris). Source : rejeu d'AF-01 sur la console déployée.</p>
+    </section>
+    <section class="chrono" aria-labelledby="t-log">
+      <h3 id="t-log">Latence par acteur, du plus rapide au plus lent</h3>
+      <p class="lede">Échelle logarithmique : chaque graduation vaut dix fois la précédente. Entre le code déterministe et le LLM, il y a cinq ordres de grandeur.</p>
+      <div class="lc-grille" role="img" aria-label="Latence par acteur en échelle logarithmique : éligibilité 0,03 ms, pièces 0,02 ms, estimation 0,02 ms, superviseur 0,01 ms, partenaire 0,7 ms, anti-fraude avec appel 37 ms, analyse de dossier par LLM 3 s">
+      <div class="lc"><span class="lc-nom">Éligibilité</span>
+        <div class="piste"><i class="bt-t code" style="left:0;width:7.6%"></i></div>
+        <span class="lc-val">0,03 ms</span></div>
+      <div class="lc"><span class="lc-nom">Pièces</span>
+        <div class="piste"><i class="bt-t code" style="left:0;width:4.8%"></i></div>
+        <span class="lc-val">0,02 ms</span></div>
+      <div class="lc"><span class="lc-nom">Estimation</span>
+        <div class="piste"><i class="bt-t code" style="left:0;width:4.8%"></i></div>
+        <span class="lc-val">0,02 ms</span></div>
+      <div class="lc"><span class="lc-nom">Superviseur</span>
+        <div class="piste"><i class="bt-t code" style="left:0;width:0.0%"></i></div>
+        <span class="lc-val">0,01 ms</span></div>
+      <div class="lc"><span class="lc-nom">Partenaire (serveur)</span>
+        <div class="piste"><i class="bt-t ext" style="left:0;width:29.3%"></i></div>
+        <span class="lc-val">0,7 ms</span></div>
+      <div class="lc"><span class="lc-nom">Anti-fraude avec appel</span>
+        <div class="piste"><i class="bt-t ext" style="left:0;width:56.6%"></i></div>
+        <span class="lc-val">37 ms</span></div>
+      <div class="lc"><span class="lc-nom">Analyse de dossier · LLM</span>
+        <div class="piste"><i class="bt-t llm" style="left:0;width:86.9%"></i></div>
+        <span class="lc-val">3 s (14 s à froid)</span></div>
+        <div class="lc"><span class="lc-nom"></span><div class="axe"><span style="left:0.0%">0,01 ms</span><span style="left:15.9%">0,1</span><span style="left:31.7%">1</span><span style="left:47.6%">10</span><span style="left:63.5%">100</span><span style="left:79.4%">1 s</span><span style="left:95.2%">10 s</span></div><span class="lc-val"></span></div>
+      </div>
+      <p class="note-t">La décision complète (superviseur, 4 agents, règles, rapport) reste sous 40 ms, partenaire compris. Le LLM n'intervient qu'à l'import des pièces et pèse environ cent fois plus.</p>
+    </section>
     <p class="autres"><b>Composants de code qui ne sont pas des agents</b> : les règles du §10 (la première qui s'applique fixe l'issue), le rapport de décision (version gestionnaire et version assuré) et la revue de fond (un signal facultatif, jamais une décision). Appels et latences mesurés sur 34 demandes des 28 scénarios fournis.</p>
   </main>
 </div>
