@@ -27,6 +27,13 @@ def decider(
         return _escalade(
             "gestionnaire", f"Pièces manquantes : {manquantes}, aucun dépôt de l'assuré (§5).", 2
         )
+    if pieces.get("incoherences"):
+        # Le §5 ne dit pas quoi faire d'une pièce incohérente : un humain vérifie, jamais de
+        # refus sur une date lue automatiquement (journal des ajustements, entrée 14).
+        ecarts = " ; ".join(pieces["incoherences"])
+        return _escalade(
+            "gestionnaire", f"Pièces incohérentes avec la déclaration : {ecarts} (§5).", 2
+        )
 
     assert estimation is not None
     montant = float(estimation["montant_estime"])

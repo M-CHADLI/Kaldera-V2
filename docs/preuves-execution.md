@@ -7,8 +7,8 @@ Livrable 4 du [brief](../brief.md#L85). Mesures relevées le **9 octobre 2026** 
 | Mesure | Code fourni (commit `b28793b`) | Équipe d'agents (9 octobre 2026) |
 |---|---|---|
 | Tests d'acceptance réussis | **11 / 56** (45 échecs) | **56 / 56** |
-| Tests au total | 56 | **511** réussis (56 d'acceptance + 455 unitaires) |
-| Couverture de `kaldera` (lignes et branches) | — | **98,77 %** (seuil bloquant : 85 %) |
+| Tests au total | 56 | **521** réussis (56 d'acceptance + 465 unitaires) |
+| Couverture de `kaldera` (lignes et branches) | — | **98,82 %** (seuil bloquant : 85 %) |
 | ruff (lint et format), mypy | — | Aucune erreur |
 | Banc d'épreuve, 3 rejeux | — | **28 / 28** scénarios conformes et stables |
 | Anomalies signalées par la revue de fond (`regles`) | — | **0** sur 28 scénarios × 3 rejeux |
@@ -31,19 +31,19 @@ cd /tmp/avant && "<dépôt>/.venv/Scripts/python" -m pytest tests/acceptance -q 
 |---|---|
 | [tests/acceptance/test_collaboration_a2a.py](../tests/acceptance/test_collaboration_a2a.py) | 16 |
 | [tests/acceptance/test_equipe_orchestration.py](../tests/acceptance/test_equipe_orchestration.py) | 40 |
-| [tests/unit/test_equipe.py](../tests/unit/test_equipe.py) | 31 |
+| [tests/unit/test_equipe.py](../tests/unit/test_equipe.py) | 39 |
 | [tests/unit/test_historique.py](../tests/unit/test_historique.py) | 12 |
 | [tests/unit/test_interfaces.py](../tests/unit/test_interfaces.py) | 24 |
 | [tests/unit/test_partenaire.py](../tests/unit/test_partenaire.py) | 33 |
 | [tests/unit/test_partenaire_antifraude.py](../tests/unit/test_partenaire_antifraude.py) | 13 |
 | [tests/unit/test_partenaire_journal.py](../tests/unit/test_partenaire_journal.py) | 31 |
 | [tests/unit/test_revue.py](../tests/unit/test_revue.py) | 92 |
-| [tests/unit/test_extraction.py](../tests/unit/test_extraction.py) | 114 |
+| [tests/unit/test_extraction.py](../tests/unit/test_extraction.py) | 116 |
 | [tests/unit/test_llm.py](../tests/unit/test_llm.py) | 7 |
 | [tests/unit/test_cas_exemples.py](../tests/unit/test_cas_exemples.py) | 98 |
-| **Total** | **511** |
+| **Total** | **521** |
 
-Couverture : 1 590 instructions, 14 non couvertes ; 518 branches, 12 partielles. Tous les modules sont à 100 %, sauf `extraction.py` (97 %, des cas limites de lecture), `cli.py` (90 %), `llm.py` (60 %, la connexion réelle à Azure AI) et `web.py` (97 %, le réglage du partenaire simulé par HTTP).
+Couverture : 1 651 instructions, 14 non couvertes ; 552 branches, 12 partielles. Tous les modules sont à 100 %, sauf `extraction.py` (97 %, des cas limites de lecture), `cli.py` (90 %), `llm.py` (60 %, la connexion réelle à Azure AI) et `web.py` (97 %, le réglage du partenaire simulé par HTTP).
 
 ## Banc d'épreuve
 
@@ -65,7 +65,7 @@ Le décompte de la revue de fond sur les trois rejeux a été fait par un script
 ## Commandes pour reproduire
 
 ```bash
-uv run pytest -q -p no:cacheprovider --cov=kaldera   # 511 passed ; Total coverage: 98.77%
+uv run pytest -q -p no:cacheprovider --cov=kaldera   # 521 passed ; Total coverage: 98.82%
 uv run pytest tests/acceptance -q -p no:cacheprovider  # 56 passed
 uv run ruff check . && uv run ruff format --check . && uv run mypy src
 uv run python scripts/epreuve.py --repetitions 3       # 28 scénarios conformes sur 28

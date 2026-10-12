@@ -118,8 +118,8 @@ class Superviseur:
             return self._decider(etat)  # règle 1 : arrêt immédiat
 
         pieces = self._boucle_pieces(etat)
-        if not pieces["conformes"]:
-            return self._decider(etat)  # règle 2
+        if not pieces["conformes"] or pieces.get("incoherences"):
+            return self._decider(etat)  # règle 2 : pièces manquantes ou incohérentes
 
         estimation = self._executer(etat, self.estimation, vues.vue_estimation(demande, pieces))
         if estimation.valeur["montant_estime"] <= 0:

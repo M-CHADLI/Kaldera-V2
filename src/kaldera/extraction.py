@@ -617,6 +617,13 @@ def normaliser(brut: Brut, pages: int = 1, graine: str = "") -> Analyse:
                 )
             else:
                 entree["montant"] = montant
+        for champ in CHAMPS_DATES.get(type_piece, ()):
+            if piece.get(champ) is None:
+                continue
+            if lue := _date(piece[champ]):
+                entree[champ] = lue
+            else:
+                a_verifier.append(f"pieces : {champ} illisible, non comparée ({source})")
         pieces.append(entree)
     if not pieces:
         a_verifier.append(
@@ -796,7 +803,56 @@ def _piece_importee(document: Document, notes: list[str]) -> dict[str, Any]:
     piece: dict[str, Any] = {"type": type_piece, "lisible": True}
     if document.role == "facture":
         piece["montant"] = _montant_facture(texte)
+    piece.update(_dates_piece(type_piece, texte))
     return piece
+
+
+# Dates lues sur une facture ou une plainte, pour la cohérence avec la déclaration (§5) : par
+# libellé (« Date des faits : … ») d'abord, sinon dans le texte libre. Une date introuvable reste
+# absente, et l'agent Pièces ne compare alors rien.
+DATE_LIBRE = (
+    r"(\d{1,2}(?:er)?\s+[a-z]+\s+\d{4}|\d{1,2}[/.\-]\d{1,2}[/.\-]\d{4}|\d{4}-\d{1,2}-\d{1,2})"
+)
+DATES_PIECES: dict[str, tuple[tuple[str, ...], str]] = {
+    # Date d'émission : affichée pour le gestionnaire, jamais un critère.
+    "date": (
+        ("date de facture", "date de la facture", "date d emission", "facture du"),
+        r"facture\b[^\n]{0,40}?\bdu\s+" + DATE_LIBRE,
+    ),
+    "date_sinistre": (
+        ("sinistre du", "date du sinistre", "date de sinistre"),
+        r"sinistre\s+(?:du|survenu\s+le)\s+" + DATE_LIBRE,
+    ),
+    "date_depot": (
+        ("date du depot", "date de depot", "depose le", "date de la plainte"),
+        r"\ble\s+" + DATE_LIBRE + r"\s*,[^.]{0,300}?\bplainte",
+    ),
+    "date_faits": (
+        ("date des faits", "faits du", "date de l infraction"),
+        r"(?:cambriole|vole|derobe|commis|survenu|faits)[^.]{0,80}?\ble\s+" + DATE_LIBRE,
+    ),
+}
+CHAMPS_DATES = {"facture": ("date", "date_sinistre"), "depot_plainte": ("date_depot", "date_faits")}
+
+
+def _dates_piece(type_piece: str, texte: str) -> dict[str, str]:
+    dates: dict[str, str] = {}
+    libre = _sans_accents(texte).lower()
+    for champ in CHAMPS_DATES.get(type_piece, ()):
+        libelles, motif = DATES_PIECES[champ]
+        cles = {_cle(libelle) for libelle in libelles}
+        valeur = None
+        for ligne in texte.splitlines():
+            etiquette = LIGNE_ETIQUETEE.match(ligne)
+            if etiquette and _cle(etiquette["lib"]) in cles:
+                valeur = _date(etiquette["val"])
+                break
+        if valeur is None:
+            trouve = re.search(motif, libre)
+            valeur = _date(trouve.group(1)) if trouve else None
+        if valeur:
+            dates[champ] = valeur
+    return dates
 
 
 def _montant_facture(texte: str) -> float | None:
@@ -861,6 +917,14 @@ LIBELLES = {
 }
 
 
+LIBELLES_DATES = {
+    "date": "émise le",
+    "date_sinistre": "pour le sinistre du",
+    "date_depot": "déposée le",
+    "date_faits": "faits du",
+}
+
+
 def fiche_contrat(analyse: Analyse) -> str:
     """Fiche lisible de l'analyse, à valider avant de lancer le traitement (contrat.md)."""
     d = analyse.demande
@@ -894,7 +958,12 @@ def fiche_contrat(analyse: Analyse) -> str:
                 etat_piece = "jointe, contenu non analysé"
             else:
                 etat_piece = "lisible" if p["lisible"] else "ILLISIBLE"
-            lignes.append(f"- {p['type']}{montant} · {etat_piece}")
+            dates = "".join(
+                f" · {LIBELLES_DATES[c]} {p[c]}"
+                for c in CHAMPS_DATES.get(p["type"], ())
+                if p.get(c)
+            )
+            lignes.append(f"- {p['type']}{montant} · {etat_piece}{dates}")
     else:
         lignes.append("- aucune pièce reconnue")
     for titre, elements in (

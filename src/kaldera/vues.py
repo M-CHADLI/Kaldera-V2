@@ -25,6 +25,8 @@ def vue_pieces(
 ) -> dict[str, Any]:
     return {
         "type_sinistre": demande["sinistre"]["type"],
+        # Seule date utile à la cohérence des pièces avec la déclaration (§5).
+        "date_survenance": demande["sinistre"]["date_survenance"],
         "pieces": [dict(p) for p in demande.get("pieces", [])] + [dict(d) for d in depots],
         "sans_depot": list(sans_depot),
     }

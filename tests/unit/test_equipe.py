@@ -275,3 +275,54 @@ def test_traiter_lot_garde_l_ordre_et_accepte_un_lot_vide() -> None:
     resultat = kaldera.traiter_lot(lot)
     assert [f["reference"] for f in resultat["fiches"]] == refs
     assert kaldera.bornes()["etapes_max"] == BORNES["etapes_max"]
+
+
+# ------------------------------------------------- cohérence des pièces avec la déclaration (§5)
+
+VOL = {"type": "vol", "date_survenance": "2026-09-01", "date_declaration": "2026-09-03"}
+FACTURE_VOL = {"type": "facture", "lisible": True, "montant": 1800.0, "date": "2025-11-20"}
+
+
+def plainte(**dates: str) -> dict[str, Any]:
+    return {"type": "depot_plainte", "lisible": True, **dates}
+
+
+@pytest.mark.parametrize(
+    ("pieces", "attendu"),
+    [
+        # Facture d'achat antérieure au vol : légitime, la date d'émission n'est jamais un critère.
+        ([FACTURE_VOL, plainte(date_depot="2026-09-02", date_faits="2026-09-01")], []),
+        ([FACTURE_VOL, plainte(date_faits="2026-09-04")], []),  # 3 jours : dans la tolérance
+        ([FACTURE_VOL, plainte(date_faits="2026-09-05")], ["plainte pour des faits du 2026-09-05"]),
+        (
+            [FACTURE_VOL, plainte(date_depot="2026-08-30", date_faits="2026-09-01")],
+            ["avant les faits"],
+        ),
+        (
+            [{**FACTURE_VOL, "date_sinistre": "2026-07-01"}, plainte()],
+            ["facture visant un sinistre"],
+        ),
+        ([FACTURE_VOL, plainte(date_faits="pas une date")], []),  # illisible : jamais comparée
+        ([FACTURE_VOL, {**plainte(date_faits="2026-06-01"), "lisible": False}], []),
+    ],
+)
+def test_coherence_des_pieces_avec_la_declaration(
+    pieces: list[dict[str, Any]], attendu: list[str]
+) -> None:
+    from kaldera.agents.pieces import incoherences
+
+    ecarts = incoherences(VOL["date_survenance"], pieces)
+    assert len(ecarts) == len(attendu)
+    assert all(morceau in ecart for morceau, ecart in zip(attendu, ecarts, strict=True))
+    assert incoherences(None, pieces) == []
+
+
+def test_une_piece_incoherente_escalade_vers_un_gestionnaire() -> None:
+    d = demande(sinistre=VOL, pieces=[FACTURE_VOL, plainte(date_faits="2026-08-10")])
+    fiche = traiter(d)
+    assert fiche["issue"] == "escalade" and fiche["file"] == "gestionnaire"
+    assert fiche["regle"] == 2 and "incohérentes avec la déclaration" in fiche["motif"]
+    assert "INCOHÉRENCE avec la déclaration" in fiche["rapport"]
+    # Les mêmes pièces, cohérentes, vont jusqu'à la décision.
+    d = demande(sinistre=VOL, pieces=[FACTURE_VOL, plainte(date_faits="2026-09-01")])
+    assert traiter(d)["issue"] == "decision"

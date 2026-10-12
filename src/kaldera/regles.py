@@ -29,6 +29,10 @@ PIECES_EXIGEES: dict[str, tuple[str, ...]] = {
     "vol": ("facture", "depot_plainte"),
 }
 
+# Cohérence des pièces avec la déclaration (§5) : écart admis entre une date citée par une
+# pièce (faits d'une plainte, sinistre visé par une facture) et la date de survenance déclarée.
+TOLERANCE_DATES_PIECES_JOURS = 3
+
 CARENCE_JOURS = 30
 DELAI_DECLARATION_JOURS = 30
 DELAI_DECLARATION_VOL_JOURS = 5

@@ -76,3 +76,23 @@ Limites assumées : une demande dont la photo est vide peut encore être accept�
 désormais que personne ne l'a regardée ; les pièces ne sont pas conservées par Kaldera (pas de stockage), donc la
 transmission de la photo au gestionnaire reste à brancher ; le retour d'un expert vers le système (nouveaux faits,
 nouvelle décision) n'est pas implémenté, c'est une évolution possible.
+
+## Cohérence des pièces avec la déclaration (§5)
+
+Le §5 demande des pièces « présentes, lisibles et cohérentes avec la déclaration ». Les trois contrôles sont
+désormais tenus, tous déterministes :
+
+| Pièce | Date lue | Comparée à | Écart toléré |
+|---|---|---|---|
+| Dépôt de plainte | faits (`date_faits`) | survenance déclarée | 3 jours |
+| Dépôt de plainte | dépôt (`date_depot`) | date des faits | le dépôt ne précède jamais les faits |
+| Facture | sinistre visé (`date_sinistre`), si le texte le cite | survenance déclarée | 3 jours |
+| Facture | émission (`date`) | rien : affichée, jamais un critère | — |
+
+La date d'émission d'une facture n'est pas un critère, car une facture d'achat antérieure au sinistre (valeur d'un
+bien détruit ou volé) est légitime, comme une facture de serrurier postérieure à un vol.
+
+Une incohérence **escalade vers un gestionnaire** (règle 2, motif « pièces incohérentes avec la déclaration ») : la
+spec ne dit pas quoi en faire, et un refus sur une date lue automatiquement serait disproportionné. Une date
+absente ou illisible n'est jamais comparée. La tolérance (`regles.TOLERANCE_DATES_PIECES_JOURS`) est un choix
+métier à faire valider.

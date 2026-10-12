@@ -232,12 +232,18 @@ def test_variante_b_n_a_aucune_ligne_etiquetee_et_cite_la_reference(cas: str) ->
 
 @pytest.mark.parametrize("cas", CAS)
 def test_variante_b_a_les_memes_pieces_que_la_variante_a(cas: str) -> None:
-    """Factures, photos et plaintes sont lues sans modèle : même liste, mêmes montants."""
+    """Factures, photos et plaintes sont lues sans modèle : même liste, mêmes montants, mêmes
+    dates. Seul le texte libre cite le sinistre visé par une facture (``date_sinistre``)."""
     pieces = []
     for variante in VARIANTES:
         lues = documents(RACINE / cas / variante, ("facture", "photo", "plainte"))
         analyse = ex.analyser_documents(lues, [ex.ExtracteurChamps()])
-        pieces.append(analyse.demande["pieces"])
+        pieces.append(
+            [
+                {k: v for k, v in p.items() if k != "date_sinistre"}
+                for p in analyse.demande["pieces"]
+            ]
+        )
     assert pieces[0] == pieces[1]
     assert any(p["type"] == "facture" for p in pieces[0])
     assert all("montant" in p for p in pieces[1] if p["type"] == "facture" and p["lisible"])

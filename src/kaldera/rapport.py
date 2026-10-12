@@ -79,6 +79,8 @@ def _pieces(section: dict[str, Any] | None, complements: int) -> list[str]:
     else:
         manquantes = ", ".join(section["a_redemander"])
         lignes = [f"2. Pièces — manquantes ou illisibles : {manquantes}{demandes} (§5)."]
+    for ecart in section.get("incoherences") or []:
+        lignes.append(f"   INCOHÉRENCE avec la déclaration : {ecart}.")
     if section.get("non_analysees"):
         lignes.append(
             f"   {', '.join(section['non_analysees'])} : reçue(s), contenu non analysé par le système"

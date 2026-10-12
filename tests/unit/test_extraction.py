@@ -734,3 +734,44 @@ def test_seule_une_reference_au_format_kal_est_retenue_du_modele(
         "texte"
     )
     assert ("reference" in brut.champs) is retenue
+
+
+def test_les_dates_des_factures_et_plaintes_sont_lues_etiquetees_ou_en_texte_libre() -> None:
+    assert ex._dates_piece("facture", "Date de facture : 03/09/2026\nTotal TTC : 1 650,00 €") == {
+        "date": "2026-09-03"
+    }
+    libre = (
+        "Facture n° PX-2025-3391 du 20 novembre 2025\n"
+        "Travaux réalisés suite au sinistre du 14 septembre 2026."
+    )
+    assert ex._dates_piece("facture", libre) == {
+        "date": "2025-11-20",
+        "date_sinistre": "2026-09-14",
+    }
+    plainte = (
+        "Le 15 septembre 2026, Madame Benali s'est présentée pour déposer plainte contre X.\n"
+        "Elle déclare que son domicile a été cambriolé avec effraction le 14 septembre 2026."
+    )
+    assert ex._dates_piece("depot_plainte", plainte) == {
+        "date_depot": "2026-09-15",
+        "date_faits": "2026-09-14",
+    }
+    assert ex._dates_piece("depot_plainte", "Date des faits : 14/09/2026") == {
+        "date_faits": "2026-09-14"
+    }
+    assert ex._dates_piece("photo", "Date : 01/01/2026") == {}
+
+
+def test_les_dates_des_pieces_sont_validees_et_affichees_sur_la_fiche() -> None:
+    brut = ex.ExtracteurChamps().extraire("\n".join(sans("- ")))
+    brut.pieces = [
+        ({"type": "facture", "montant": 100.0, "date": "03/09/2026", "date_sinistre": "??"}, "t"),
+        ({"type": "depot_plainte", "date_faits": "14 septembre 2026"}, "t"),
+    ]
+    analyse = ex.normaliser(brut)
+    facture, plainte = analyse.demande["pieces"]
+    assert facture == {"type": "facture", "lisible": True, "montant": 100.0, "date": "2026-09-03"}
+    assert plainte["date_faits"] == "2026-09-14"
+    assert any("date_sinistre illisible" in note for note in analyse.a_verifier)
+    fiche = ex.fiche_contrat(analyse)
+    assert "émise le 2026-09-03" in fiche and "faits du 2026-09-14" in fiche
