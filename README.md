@@ -121,6 +121,11 @@ PROJET=<id-du-projet> ./scripts/deployer_partenaire.sh
 PROJET=<id-du-projet> PARTENAIRE_URL=<url> PARTENAIRE_JETON=<jeton> ./scripts/deployer_console.sh
 ```
 
+- La console en ligne utilise le modèle pour l'analyse de dossier (`KALDERA_EXTRACTION=auto`,
+  repli sur la lecture par champs). `deployer_console.sh` reprend les variables `AZURE_OPENAI_*`
+  et `KALDERA_EXTRACTION` de l'environnement : sans elles, le modèle est désactivé en ligne. Elles
+  sont stockées en variables d'environnement Cloud Run, lisibles par qui a accès au projet, et la
+  console étant publique, n'importe qui peut déclencher des appels au modèle.
 - Les scripts construisent l'image **en local avec Docker**, puis la poussent dans
   Artifact Registry : `gcloud run deploy --source` échoue sur ce projet, car le compte de
   service de Cloud Build n'a pas les droits nécessaires.
