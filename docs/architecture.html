@@ -124,6 +124,24 @@
   .carte-ag .chiffres span { font: 600 12px var(--mono); padding: 2px 8px; border-radius: 3px; background: var(--mut-s); border: 1px solid var(--line); }
   .nat-chip { font: 700 12px var(--mono); letter-spacing: .06em; padding: 2px 8px; border-radius: 4px; border: 1.5px solid var(--ink2); white-space: nowrap; }
   .nat-chip.llm { border-color: var(--llm); background: var(--llm-s); color: var(--llm); }
+  .cu-titre { margin: 14px 0 6px; font-size: 14px; color: var(--ink2); }
+  .cu-titre b { color: var(--ink); font-family: var(--mono); }
+  .cumul { list-style: none; margin: 0 0 4px; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: 0; overflow-x: auto; }
+  .cu-etape { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; border: 1px solid var(--line); border-left-width: 0; background: var(--mut-s); min-width: 0; }
+  .cu-etape:first-child { border-left-width: 1px; border-radius: 6px 0 0 6px; }
+  .cu-etape:last-child { border-radius: 0 6px 6px 0; }
+  .cu-etape::after { content: ""; position: absolute; right: -9px; top: 50%; width: 16px; height: 16px; margin-top: -8px; transform: rotate(45deg); background: inherit; border-top: 1px solid var(--line); border-right: 1px solid var(--line); z-index: 1; }
+  .cu-etape:last-child::after { display: none; }
+  .cu-etape.llm { background: var(--llm-s); border-color: var(--llm); }
+  .cu-etape.ext { background: var(--amb-s); border-color: var(--amb); }
+  .cu-etape.humain { background: var(--card); border-style: dashed; }
+  .cu-nat { font: 700 10.5px var(--mono); letter-spacing: .06em; color: var(--ink2); }
+  .cu-etape.llm .cu-nat { color: var(--llm); }
+  .cu-etape.ext .cu-nat { color: var(--amb); }
+  .cu-etape b { font-size: 14.5px; }
+  .cu-duree { font: 700 16px var(--mono); font-variant-numeric: tabular-nums; }
+  .cu-t { font: 12px var(--mono); color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .cu-det { font-size: 12.5px; color: var(--ink2); margin-top: 2px; }
   .chrono { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--line); }
   .chrono h3 { font: 700 17px var(--sans); margin: 0 0 4px; }
   .chrono .lede { margin: 0 0 12px; font-size: 14px; }
@@ -344,27 +362,58 @@
       </article>
     </div>
     <section class="chrono" aria-labelledby="t-chrono">
-      <h3 id="t-chrono">Une demande de bout en bout : 37,06 ms</h3>
-      <p class="lede">Chronogramme d'une demande qui consulte le partenaire (scénario AF-01, version en ligne). Échelle linéaire : les quatre composants en code tiennent chacun en quelques centièmes de milliseconde, l'appel au partenaire fait presque tout le temps.</p>
-      <div class="lc-grille" role="img" aria-label="Chronogramme : éligibilité 0,02 ms, pièces 0,02 ms, estimation 0,01 ms, anti-fraude avec appel au partenaire 37 ms, superviseur 0,01 ms ; total 37 ms">
-      <div class="lc"><span class="lc-nom">1 · Éligibilité</span>
-        <div class="piste"><i class="bt-t code" style="left:0.000%;width:0.050%"></i></div>
-        <span class="lc-val">0,02 ms</span></div>
-      <div class="lc"><span class="lc-nom">2 · Pièces</span>
-        <div class="piste"><i class="bt-t code" style="left:0.050%;width:0.050%"></i></div>
-        <span class="lc-val">0,02 ms</span></div>
-      <div class="lc"><span class="lc-nom">3 · Estimation</span>
-        <div class="piste"><i class="bt-t code" style="left:0.100%;width:0.025%"></i></div>
-        <span class="lc-val">0,01 ms</span></div>
-      <div class="lc"><span class="lc-nom">4 · Anti-fraude + partenaire</span>
-        <div class="piste"><i class="bt-t ext" style="left:0.125%;width:92.500%"></i></div>
-        <span class="lc-val">37 ms</span></div>
-      <div class="lc"><span class="lc-nom">Superviseur : conclut</span>
-        <div class="piste"><i class="bt-t code" style="left:92.625%;width:0.025%"></i></div>
-        <span class="lc-val">0,01 ms</span></div>
-        <div class="lc"><span class="lc-nom"></span><div class="axe"><span style="left:0.0%">0 ms</span><span style="left:25.0%">10 ms</span><span style="left:50.0%">20 ms</span><span style="left:75.0%">30 ms</span><span style="left:100.0%">40 ms</span></div><span class="lc-val"></span></div>
-      </div>
-      <p class="note-t">Dans les 37 ms de l'anti-fraude, le partenaire traite la demande en 0,7 ms : le reste est du réseau (Cloud Run en Paris). Source : rejeu d'AF-01 sur la console déployée.</p>
+      <h3 id="t-chrono">Timeline cumulée : chaque étape démarre quand la précédente se termine</h3>
+      <p class="lede">Deux horloges, car un humain relit la fiche entre les deux. Les segments ont la même largeur : la durée de chaque étape est écrite, une échelle linéaire rendrait les étapes en code invisibles.</p>
+      <p class="cu-titre">Phase 1 · de l'import à la fiche <b>3 s</b></p>
+      <ol class="cumul" aria-label="Phase 1, import des pièces">
+        <li class="cu-etape llm">
+          <span class="cu-nat">LLM</span>
+          <b>Extraction</b>
+          <span class="cu-duree">+ 3 s</span>
+          <span class="cu-t">début 0<br>fin 3 s</span>
+          <span class="cu-det">Lit le contrat et la déclaration (2 appels). Factures, photos, plainte : lues par du code.</span>
+        </li>
+        <li class="cu-etape humain"><span class="cu-nat">HUMAIN</span><b>Relecture de la fiche</b><span class="cu-duree">hors chrono</span><span class="cu-t">durée libre</span><span class="cu-det">Vous validez la demande avant tout traitement.</span></li>
+      </ol>
+      <p class="cu-titre">Phase 2 · de « Traiter la demande » à l'issue <b>37,06 ms</b></p>
+      <ol class="cumul" aria-label="Phase 2, décision">
+        <li class="cu-etape code">
+          <span class="cu-nat">CODE</span>
+          <b>1 · Éligibilité</b>
+          <span class="cu-duree">+ 0,02 ms</span>
+          <span class="cu-t">début 0<br>fin 0,02 ms</span>
+          <span class="cu-det">Contrat, dates, garantie.</span>
+        </li>
+        <li class="cu-etape code">
+          <span class="cu-nat">CODE</span>
+          <b>2 · Pièces</b>
+          <span class="cu-duree">+ 0,02 ms</span>
+          <span class="cu-t">début 0,02 ms<br>fin 0,04 ms</span>
+          <span class="cu-det">Vérifie les pièces déjà lues : présence, lisibilité, dates.</span>
+        </li>
+        <li class="cu-etape code">
+          <span class="cu-nat">CODE</span>
+          <b>3 · Estimation</b>
+          <span class="cu-duree">+ 0,01 ms</span>
+          <span class="cu-t">début 0,04 ms<br>fin 0,05 ms</span>
+          <span class="cu-det">Franchise, plafond.</span>
+        </li>
+        <li class="cu-etape ext">
+          <span class="cu-nat">PARTENAIRE</span>
+          <b>4 · Anti-fraude</b>
+          <span class="cu-duree">+ 37 ms</span>
+          <span class="cu-t">début 0,05 ms<br>fin 37,05 ms</span>
+          <span class="cu-det">Appel au partenaire : 0,7 ms de traitement, le reste est du réseau.</span>
+        </li>
+        <li class="cu-etape code">
+          <span class="cu-nat">CODE</span>
+          <b>Superviseur : conclut</b>
+          <span class="cu-duree">+ 0,01 ms</span>
+          <span class="cu-t">début 37,05 ms<br>fin 37,06 ms</span>
+          <span class="cu-det">Règles du §10 et rapport.</span>
+        </li>
+      </ol>
+      <p class="note-t">Phase 2 mesurée sur AF-01, version en ligne (appel au partenaire inclus). Sans appel au partenaire, la décision entière tient en quelques centièmes de milliseconde.</p>
     </section>
     <section class="chrono" aria-labelledby="t-log">
       <h3 id="t-log">Latence par acteur, du plus rapide au plus lent</h3>
