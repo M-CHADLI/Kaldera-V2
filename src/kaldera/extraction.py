@@ -508,26 +508,143 @@ class Analyse:
         }
 
 
+NORMALISEURS: dict[str, Any] = {
+    "contrat.formule": lambda v: _choix(v, FORMULES),
+    "contrat.date_souscription": _date,
+    "contrat.statut": lambda v: _choix(
+        v, STATUTS, {"resilie": "resilie", "resilié": "resilie", "resiliee": "resilie"}
+    ),
+    "contrat.cotisations_a_jour": _booleen,
+    "sinistre.type": lambda v: _choix(v, TYPES_SINISTRE) or _type_sinistre(v),
+    "sinistre.date_survenance": _date,
+    "sinistre.date_declaration": _date,
+    "sinistre.montant_declare": _montant,
+    "historique.sinistres_12_mois": _entier,
+    "assure.iban": _iban,
+}
+
+# Champs que la double lecture compare. Adresse et description sont exclues : le modèle les
+# reformule légitimement, ce qui ne dit rien sur une manipulation.
+CHAMPS_CONTROLES = (
+    "reference",
+    "assure.id_client",
+    "assure.nom",
+    "assure.prenom",
+    "assure.email",
+    "assure.code_postal",
+    "assure.iban",
+    "contrat.numero",
+    "contrat.formule",
+    "contrat.date_souscription",
+    "contrat.statut",
+    "contrat.cotisations_a_jour",
+    "sinistre.type",
+    "sinistre.date_survenance",
+    "sinistre.date_declaration",
+    "sinistre.montant_declare",
+    "historique.sinistres_12_mois",
+)
+
+
+def _comparable(chemin: str, valeur: Any) -> Any:
+    """Valeur ramenée à une forme comparable : même validation que la demande, sans accents ni casse."""
+    normaliseur = NORMALISEURS.get(chemin)
+    v = normaliseur(valeur) if normaliseur else str(valeur).strip()
+    if v is None or v == "":
+        return None
+    if chemin == "assure.code_postal":
+        trouve = re.search(r"\d{5}|2[AB]\d{3}", str(v))
+        return trouve.group() if trouve else None
+    return _sans_accents(v).lower().strip() if isinstance(v, str) else v
+
+
+# Formulations qui s'adressent à un assistant plutôt qu'à un gestionnaire : un dossier d'assurance
+# n'en contient pas. Le texte est signalé, jamais obéi ; la liste est volontairement étroite.
+MOTIFS_CONSIGNE = re.compile(
+    r"ignore[rz]?\s+(?:tes|vos|les|toutes?)\s+(?:consignes?|instructions?|r[eè]gles?)"
+    r"|consignes?\s+pr[eé]c[eé]dentes?"
+    r"|nouvelles?\s+(?:consignes?|instructions?)"
+    r"|\[\s*syst[eè]me\s*\]|</?\s*document\s*>"
+    r"|tu\s+es\s+maintenant|[aà]\s+partir\s+de\s+maintenant,?\s+tu"
+    r"|r[eé]ponds\s+(?:uniquement\s+)?(?:par|avec)"
+    r"|recopie\s+(?:ta|votre)\s+consigne"
+    r"|dans\s+le\s+champ\s+[a-z_.]+"
+    r"|utilise\s+(?:cette|cet|ce)\s+valeur",
+    re.IGNORECASE,
+)
+
+
+# Champs qu'un document ne peut pas légitimement fournir : le contrat ne dit rien du sinistre ni de
+# l'historique ; la déclaration n'est pas la source du statut du contrat ni de ses cotisations. Une
+# ligne étiquetée qui les contredit est ignorée, sinon elle l'emporterait sur le bon document.
+INTERDITS_PAR_ROLE: dict[str, tuple[str, ...]] = {
+    "contrat": ("sinistre.", "historique."),
+    "declaration": (
+        "contrat.statut",
+        "contrat.cotisations_a_jour",
+        "contrat.formule",
+        "contrat.date_souscription",
+    ),
+}
+
+
+def filtrer_par_role(brut: Brut, role: str, document: str) -> list[str]:
+    """Retire de ``brut`` ce que le rôle du document n'a pas à fournir ; renvoie les notes."""
+    interdits = INTERDITS_PAR_ROLE.get(role, ())
+    ecartes = [c for c in brut.champs if c.startswith(interdits)] if interdits else []
+    for chemin in ecartes:
+        del brut.champs[chemin]
+    return [
+        f"{chemin} : trouvé dans {document} mais ce document ne peut pas le fournir, ignoré"
+        for chemin in ecartes
+    ]
+
+
+def consigne_cachee(texte: str, document: str) -> list[str]:
+    """Signale un texte qui donne des ordres à un assistant (tentative d'injection)."""
+    trouve = MOTIFS_CONSIGNE.search(_sans_accents(texte))
+    if not trouve:
+        return []
+    return [
+        f"{document} : texte qui s'adresse à un assistant automatique (« {trouve.group().strip()} »), "
+        "ignoré par l'analyse ; vérifiez le document et les valeurs lues"
+    ]
+
+
+def double_lecture(modele: Brut, champs: Brut, document: str) -> list[str]:
+    """Compare la lecture du modèle à la lecture par champs, qu'un texte injecté ne peut pas dicter.
+
+    Un désaccord est une anomalie qui bloque le traitement : la valeur retenue est celle de la
+    lecture par champs, plus prudente, et le gestionnaire voit les deux. Un champ que la lecture
+    par champs n'a pas trouvé (texte libre) n'est jamais contesté : il n'y a rien à comparer.
+    """
+    desaccords: list[str] = []
+    for chemin in CHAMPS_CONTROLES:
+        if chemin not in modele.champs or chemin not in champs.champs:
+            continue
+        lu_modele = _comparable(chemin, modele.champs[chemin][0])
+        lu_champs = _comparable(chemin, champs.champs[chemin][0])
+        if lu_modele is None or lu_champs is None or lu_modele == lu_champs:
+            continue
+        desaccords.append(
+            f"{chemin} : désaccord entre les deux lectures de {document} "
+            f"(modèle « {modele.champs[chemin][0]} », lecture par champs « {champs.champs[chemin][0]} »)"
+            " ; valeur de la lecture par champs retenue, à vérifier sur le document"
+        )
+        modele.champs[chemin] = (
+            champs.champs[chemin][0],
+            f"{champs.champs[chemin][1]} (désaccord avec le modèle)",
+        )
+    return desaccords
+
+
 def normaliser(brut: Brut, pages: int = 1, graine: str = "") -> Analyse:
     """Valide ce qu'un extracteur a trouvé et assemble la demande du §3."""
     champs, sources = brut.champs, {c: s for c, (_, s) in brut.champs.items()}
     manquants: list[str] = []
     anomalies: list[str] = []
     a_verifier: list[str] = []
-    normaliseurs: dict[str, Any] = {
-        "contrat.formule": lambda v: _choix(v, FORMULES),
-        "contrat.date_souscription": _date,
-        "contrat.statut": lambda v: _choix(
-            v, STATUTS, {"resilie": "resilie", "resilié": "resilie", "resiliee": "resilie"}
-        ),
-        "contrat.cotisations_a_jour": _booleen,
-        "sinistre.type": lambda v: _choix(v, TYPES_SINISTRE) or _type_sinistre(v),
-        "sinistre.date_survenance": _date,
-        "sinistre.date_declaration": _date,
-        "sinistre.montant_declare": _montant,
-        "historique.sinistres_12_mois": _entier,
-        "assure.iban": _iban,
-    }
+    normaliseurs = NORMALISEURS
     valeurs: dict[str, Any] = {}
     for chemin in (*OBLIGATOIRES, *INFORMATIFS, "reference", "historique.sinistres_12_mois"):
         if chemin not in champs:
@@ -723,6 +840,7 @@ def analyser_documents(
     if sum(len(d.octets) for d in documents) > TAILLE_TOTALE_MAX_OCTETS:
         raise PdfInvalide("dossier trop volumineux")
     total, notes, pages = Brut(), [], 0
+    desaccords: list[str] = []
     noms: list[str] = []
     pieces_importees: list[tuple[dict[str, Any], str]] = []
     pieces_du_texte: list[tuple[dict[str, Any], str]] = []
@@ -734,8 +852,14 @@ def analyser_documents(
             if document.role in ROLES_TEXTE:
                 texte, nb = lire_pdf(document.octets)
                 pages += nb
+                desaccords += consigne_cachee(texte, document.nom)
                 brut, avertissements, nom_extracteur = _extraire(texte, essais)
                 notes += avertissements
+                if nom_extracteur == "modèle":
+                    controle = ExtracteurChamps().extraire(texte)
+                    notes += filtrer_par_role(controle, document.role, document.nom)
+                    desaccords += double_lecture(brut, controle, document.nom)
+                notes += filtrer_par_role(brut, document.role, document.nom)
                 noms.append(nom_extracteur)
                 for chemin, (valeur, source) in brut.champs.items():
                     total.champs.setdefault(chemin, (valeur, f"{source} · {document.nom}"))
@@ -755,6 +879,7 @@ def analyser_documents(
     total.extracteur = " + ".join(dict.fromkeys(noms)) or "pièces"
     graine = hashlib.sha256(b"".join(d.octets for d in documents)).hexdigest()
     analyse = normaliser(total, max(pages, 1), graine)
+    analyse.anomalies = desaccords + analyse.anomalies
     analyse.a_verifier = notes + analyse.a_verifier
     return analyse
 

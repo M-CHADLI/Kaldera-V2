@@ -96,3 +96,28 @@ Une incohérence **escalade vers un gestionnaire** (règle 2, motif « pièces i
 spec ne dit pas quoi en faire, et un refus sur une date lue automatiquement serait disproportionné. Une date
 absente ou illisible n'est jamais comparée. La tolérance (`regles.TOLERANCE_DATES_PIECES_JOURS`) est un choix
 métier à faire valider.
+
+## Garde-fous quand un modèle lit des pièces
+
+Le texte d'un dossier est écrit par l'assuré : c'est une donnée, jamais une consigne. Le modèle ne décide
+rien (sa sortie est une demande candidate, relue par un humain, puis jugée par des règles en code), mais il
+peut être trompé sur une valeur. Six protections s'empilent :
+
+| Garde-fou | Ce qu'il arrête |
+|---|---|
+| Document balisé et déclaré « donnée » dans la consigne | Injection simple (aide, pas une garantie) |
+| Sortie imposée (JSON de forme fixe) et **une seule validation** après le modèle | Sortie hors format, valeur hors liste |
+| **Double lecture** : le modèle est comparé à la lecture par champs ; un désaccord est une anomalie bloquante, la valeur de la lecture par champs est retenue | Une valeur fausse que le modèle a suivie |
+| **Détecteur** de texte qui s'adresse à un assistant (« ignore tes consignes », « [SYSTÈME] », « dans le champ iban »…) | Injection en texte libre, où il n'y a rien à comparer |
+| **Chaque document ne fournit que les champs de son rôle** : le contrat ne dicte ni sinistre ni historique, la déclaration ni statut ni cotisations | Une ligne glissée dans le mauvais document |
+| Plafonds (5 Mo, 12 documents, 20 pages, 30 000 caractères) et aucun outil pour le modèle | Documents énormes, actions parasites |
+
+Mesure : [docs/epreuve-injection.md](../epreuve-injection.md), 9 attaques × 2 variantes contre gpt-5.4-mini
+(`scripts/epreuve_injection.py`). Dernier passage : 15 résistent, 3 sont signalés, aucune ne passe. Un seul
+passage, non déterministe : le premier passage laissait passer 3 attaques, et c'est lui qui a motivé le
+détecteur et la restriction par rôle.
+
+**Limites assumées** : une valeur fausse mais plausible, écrite sans formulation d'ordre, dans un texte libre
+et dans le bon document, ne peut être repérée que par l'humain qui relit la fiche. Statut du contrat,
+cotisations et IBAN lus dans des pièces de l'assuré sont par nature contestables : ils devraient venir d'une
+source de l'assureur (voir la gateway de données).
