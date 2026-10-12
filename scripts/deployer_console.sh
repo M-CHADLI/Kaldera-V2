@@ -13,9 +13,9 @@ PROJET="${PROJET:?indiquez PROJET=<id du projet GCP>}"
 REGION="${REGION:-europe-west9}"
 SERVICE="${SERVICE:-kaldera-console}"
 PARTENAIRE_URL="${PARTENAIRE_URL:?indiquez PARTENAIRE_URL=<url du partenaire>}"
-PARTENAIRE_URL="${PARTENAIRE_URL//$''/}"
+PARTENAIRE_URL="${PARTENAIRE_URL//$'\r'/}"
 PARTENAIRE_JETON="${PARTENAIRE_JETON:?indiquez PARTENAIRE_JETON=<jeton du partenaire>}"
-PARTENAIRE_JETON="${PARTENAIRE_JETON//$''/}"
+PARTENAIRE_JETON="${PARTENAIRE_JETON//$'\r'/}"
 DEPOT="${DEPOT:-kaldera}"
 IMAGE="$REGION-docker.pkg.dev/$PROJET/$DEPOT/$SERVICE:$(date +%Y%m%d-%H%M%S)"
 
@@ -45,7 +45,7 @@ VARIABLES="PARTENAIRE_URL=$PARTENAIRE_URL,PARTENAIRE_JETON=$PARTENAIRE_JETON"
 for NOM in AZURE_OPENAI_API_KEY AZURE_OPENAI_ENDPOINT AZURE_OPENAI_DEPLOYMENT_NAME \
   AZURE_OPENAI_API_VERSION KALDERA_EXTRACTION KALDERA_REVUE KALDERA_LLM_DELAI_S; do
   VALEUR="${!NOM:-}"
-  VALEUR="${VALEUR//$''/}"  # un retour chariot Windows casserait l'URL du partenaire
+  VALEUR="${VALEUR//$'\r'/}"  # un retour chariot Windows casserait l'URL du partenaire
   [ -z "$VALEUR" ] && continue
   case "$VALEUR" in *,*) echo "$NOM contient une virgule : déploiement annulé." >&2; exit 1 ;; esac
   VARIABLES="$VARIABLES,$NOM=$VALEUR"
