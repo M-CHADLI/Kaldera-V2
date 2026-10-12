@@ -13,7 +13,7 @@
   :root {
     --bg: #F4F6F9; --card: #FFFFFF; --ink: #0F172A; --ink2: #475569; --line: #CBD5E1; --grid: #DDE3EC;
     --ok: #15803D; --ok-s: #DCFCE7; --amb: #B45309; --amb-s: #FEF3C7; --blu: #1D4ED8; --blu-s: #DBEAFE; --mut-s: #E9EDF3;
-    --ombre: rgba(15,23,42,.14);
+    --ombre: rgba(15,23,42,.14); --llm: #6D28D9; --llm-s: #EDE9FE;
     --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   }
@@ -21,13 +21,13 @@
     :root:not([data-theme="light"]) {
       --bg: #0B1220; --card: #111A2E; --ink: #E6EBF3; --ink2: #9AA7BB; --line: #334155; --grid: #1B2740;
       --ok: #4ADE80; --ok-s: rgba(74,222,128,.12); --amb: #FBBF24; --amb-s: rgba(251,191,36,.12);
-      --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; --ombre: rgba(0,0,0,.45); color-scheme: dark;
+      --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; --ombre: rgba(0,0,0,.45); --llm: #C4B5FD; --llm-s: rgba(167,139,250,.22); color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #0B1220; --card: #111A2E; --ink: #E6EBF3; --ink2: #9AA7BB; --line: #334155; --grid: #1B2740;
     --ok: #4ADE80; --ok-s: rgba(74,222,128,.12); --amb: #FBBF24; --amb-s: rgba(251,191,36,.12);
-    --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; --ombre: rgba(0,0,0,.45); color-scheme: dark;
+    --blu: #7AA2FF; --blu-s: rgba(122,162,255,.12); --mut-s: #18233A; --ombre: rgba(0,0,0,.45); --llm: #C4B5FD; --llm-s: rgba(167,139,250,.22); color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -96,6 +96,7 @@
   .b-nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
   .b-nav .bt { min-height: 44px; font-size: 14px; padding: 8px 14px; }
   .b-nav .pos { font: 600 14px var(--mono); color: var(--ink2); font-variant-numeric: tabular-nums; margin-inline: 4px auto; }
+  .bandeau[hidden] { display: none; }
   .app.pres main { grid-template-columns: minmax(0, 1fr); }
   .app.pres aside, .app.pres .aide, .app.pres .zoom { display: none; }
   .app.pres .legende { top: 10px; bottom: auto; }
@@ -112,6 +113,14 @@
   .blk:focus { outline: none; }
   .blk:focus-visible .box { stroke: var(--ok); stroke-width: 4; }
   .blk.dim { opacity: .2; }
+  .past rect { stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .past rect.base { fill: var(--card); stroke: none; }
+  .past.code rect.teinte { fill: var(--card); stroke: var(--ink2); }
+  .past.code text { fill: var(--ink); }
+  .past.llm rect.teinte { fill: var(--llm-s); stroke: var(--llm); }
+  .past.llm text { fill: var(--llm); }
+  .past text { font-family: var(--mono); font-weight: 700; letter-spacing: .06em; text-anchor: middle; }
+  .lg-code { background: var(--card); border-color: var(--ink2); } .lg-llm { background: var(--llm-s); border-color: var(--llm); }
   .blk.off { opacity: 0; pointer-events: none; }
   .blk.sel .box { stroke-width: 3.2; stroke: var(--ink); }
   .blk .det, .blk .det2 { transition: opacity .25s; } .blk .det.off, .blk .det2.off { opacity: 0; }
@@ -152,6 +161,7 @@
       <div class="legende" aria-hidden="true">
         <span><i class="lg-core"></i>équipe Kaldera</span><span><i class="lg-ext"></i>partenaire</span>
         <span><i class="lg-infra"></i>livraison</span><span><i class="lg-opt"></i>facultatif</span>
+        <span><i class="lg-code"></i>CODE déterministe</span><span><i class="lg-llm"></i>LLM</span>
       </div>
       <section class="bandeau" id="bandeau" hidden aria-label="Présentation pas à pas" aria-live="polite">
         <div class="prog" aria-hidden="true"><i id="prog"></i></div>
@@ -315,6 +325,13 @@
     { p: [[970, 780], [1000, 780]], needs: "decision" }, { p: [[1230, 780], [1260, 780]], needs: "rapport" }
   ];
 
+  /* ---------- Nature des composants : pastille visible dès le niveau « Moteur » ---------- */
+  var NATURE = {
+    superviseur: ["CODE"], elig: ["CODE"], pieces: ["CODE"], estim: ["CODE"], anti: ["CODE"],
+    decision: ["CODE"], rapport: ["CODE"], client: ["CODE"], hist: ["CODE"],
+    extraction: ["LLM", "llm"], revue: ["CODE · LLM facultatif", "llm"], part: ["CODE"]
+  };
+
   /* ---------- Exigences de la direction des opérations (brief) ---------- */
   var EXIG = {
     E1: "jamais de blocage silencieux", E2: "un rôle, une frontière", E3: "seules les données du contrat partent",
@@ -383,6 +400,16 @@
       o.gd = el("g", { "class": "det" }, g); o.gm = el("g", { "class": "det2" }, g);
       o.det.forEach(function (s, i) { var e = el("text", { x: o.x + 16, y: o.y + d0 + i * step, "class": "td", "font-size": fz }, o.gd); e.textContent = s; });
       o.more.forEach(function (s, i) { var e = el("text", { x: o.x + 16, y: o.y + d0 + (o.det.length + i) * step, "class": "td", "font-size": fz }, o.gm); e.textContent = s; });
+    }
+    var nat = NATURE[o.id];
+    if (nat) {
+      var tf = [24, 18, 15][Math.min(o.depth, 2)], h = tf + 10, w = Math.round(nat[0].length * tf * 0.66 + 18);
+      var gp = el("g", { "class": "past " + (nat[1] || "code") }, g);
+      var py = o.y - h + 7;  /* presque entièrement au-dessus du bord : le titre reste dégagé */
+      var rx = { x: o.x + o.w - w - 14, y: py, width: w, height: h, rx: 4 };
+      el("rect", rx, gp).setAttribute("class", "base");
+      el("rect", rx, gp).setAttribute("class", "teinte");
+      var tp = el("text", { x: o.x + o.w - w / 2 - 14, y: py + h / 2 + tf * 0.35, "font-size": tf }, gp); tp.textContent = nat[0];
     }
     o.g = g;
   });
