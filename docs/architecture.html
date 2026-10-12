@@ -97,6 +97,34 @@
   .b-nav .bt { min-height: 44px; font-size: 14px; padding: 8px 14px; }
   .b-nav .pos { font: 600 14px var(--mono); color: var(--ink2); font-variant-numeric: tabular-nums; margin-inline: 4px auto; }
   .bandeau[hidden] { display: none; }
+  /* Vue « cartes des agents » : un schéma d'ordre, puis une carte par agent */
+  main[hidden] { display: none; }
+  .bt:disabled { opacity: .4; cursor: default; background: var(--card); border-color: var(--line); color: var(--ink2); }
+  main.agents-vue { display: block; grid-template-columns: none; min-height: 0; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--card); padding: 20px; }
+  .agents-vue h2 { font: 700 20px var(--mono); margin: 0 0 4px; }
+  .agents-vue .lede { color: var(--ink2); margin: 0 0 16px; max-width: 80ch; }
+  .ordre { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 12px 0 22px; }
+  .ordre .etape { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--mut-s); min-width: 130px; }
+  .ordre .etape b { font-size: 15px; }
+  .ordre .etape span { font: 12px var(--mono); color: var(--ink2); }
+  .ordre .etape.llm { border-color: var(--llm); background: var(--llm-s); }
+  .ordre .etape.stop { border-style: dashed; }
+  .ordre .fl { align-self: center; color: var(--ink2); font: 700 18px var(--mono); }
+  .grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+  .carte-ag { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-left: 5px solid var(--ok); border-radius: 6px; background: var(--card); }
+  .carte-ag.llm { border-left-color: var(--llm); }
+  .carte-ag.ext { border-left-color: var(--amb); }
+  .carte-ag header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .carte-ag h3 { font: 700 17px var(--sans); margin: 0; }
+  .carte-ag .q { margin: 0; font-style: italic; color: var(--ink2); }
+  .carte-ag dl { margin: 0; display: grid; grid-template-columns: 7.5em 1fr; gap: 4px 10px; font-size: 14px; }
+  .carte-ag dt { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--ink2); padding-top: 2px; }
+  .carte-ag dd { margin: 0; }
+  .carte-ag .chiffres { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .carte-ag .chiffres span { font: 600 12px var(--mono); padding: 2px 8px; border-radius: 3px; background: var(--mut-s); border: 1px solid var(--line); }
+  .nat-chip { font: 700 12px var(--mono); letter-spacing: .06em; padding: 2px 8px; border-radius: 4px; border: 1.5px solid var(--ink2); white-space: nowrap; }
+  .nat-chip.llm { border-color: var(--llm); background: var(--llm-s); color: var(--llm); }
+  .autres { margin-top: 20px; padding: 12px 16px; border: 1px dashed var(--line); border-radius: 6px; color: var(--ink2); font-size: 14px; }
   .app.pres main { grid-template-columns: minmax(0, 1fr); }
   .app.pres aside, .app.pres .aide, .app.pres .zoom { display: none; }
   .app.pres .legende { top: 10px; bottom: auto; }
@@ -144,6 +172,8 @@
     <h1>KALDERA<span>/</span>architecture</h1>
     <div class="aide">Molette ou pincement pour zoomer, glisser pour déplacer, clic (ou <kbd>Tab</kbd> puis <kbd>Entrée</kbd>) sur un bloc pour zoomer dessus.</div>
     <div class="barre" role="toolbar" aria-label="Présentation et niveaux de zoom">
+      <button class="bt" id="vue-carte" aria-pressed="true" title="Carte zoomable">Carte</button>
+      <button class="bt" id="vue-cartes" aria-pressed="false" title="Une carte par agent">Cartes des agents</button>
       <button class="bt primaire" id="presenter" aria-pressed="false" title="Touche P"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 0.5 9.5 5 1 9.5z"/></svg>Présenter</button>
       <button class="bt" data-niv="1">1 · Contexte</button>
       <button class="bt" data-niv="2">2 · Plateforme</button>
@@ -177,6 +207,127 @@
       </section>
     </div>
     <aside id="panneau" aria-live="polite"></aside>
+  </main>
+  <main class="agents-vue" id="agents-vue" hidden aria-label="Cartes des agents">
+    <h2>Les agents de l'équipe</h2>
+    <p class="lede">Un agent a un rôle et une frontière : ce qu'il décide, et ce qu'il ne fait jamais. Le superviseur les appelle dans un ordre fixe et s'arrête dès qu'une règle conclut.</p>
+    <div class="ordre" role="img" aria-label="Ordre d'exécution : analyse de dossier, superviseur, éligibilité, pièces, estimation, anti-fraude, issue">
+      <div class="etape llm"><b>Analyse de dossier</b><span>LLM · avant le moteur</span></div><span class="fl">→</span>
+      <div class="etape"><b>Superviseur</b><span>CODE · ordre fixe</span></div><span class="fl">→</span>
+      <div class="etape"><b>1 · Éligibilité</b><span>CODE</span></div><span class="fl">→</span>
+      <div class="etape"><b>2 · Pièces</b><span>CODE · 0 à 2 appels</span></div><span class="fl">→</span>
+      <div class="etape"><b>3 · Estimation</b><span>CODE</span></div><span class="fl">→</span>
+      <div class="etape"><b>4 · Anti-fraude</b><span>CODE · partenaire si F1 à F4</span></div><span class="fl">→</span>
+      <div class="etape stop"><b>Issue</b><span>décision ou escalade</span></div>
+    </div>
+    <div class="grille">
+      <article class="carte-ag llm">
+        <header><h3>Analyse de dossier</h3><span class="nat-chip llm">LLM</span></header>
+        <p class="q">Que dit ce dossier ?</p>
+        <dl>
+          <dt>Rôle</dt><dd>Transforme les pièces importées en une demande au format du §3, plus une fiche à valider.</dd>
+          <dt>Ne fait jamais</dt><dd>Décider, conserver une pièce, juger le contenu d'une photo.</dd>
+          <dt>Entrée</dt><dd>Contrat, déclaration (PDF) ; factures, photos, plainte.</dd>
+          <dt>Sortie</dt><dd>Demande JSON et fiche, relues par un humain avant tout traitement.</dd>
+          <dt>Dépend de</dt><dd>Rien : elle précède le moteur.</dd>
+          <dt>Règles</dt><dd>Garde-fous : double lecture, détecteur de consigne, champs par rôle.</dd>
+          <dt>Code</dt><dd><code>src/kaldera/extraction.py</code></dd>
+          <dt>Exigences</dt><dd>—</dd>
+        </dl>
+        <div class="chiffres"><span>Appels par demande : 2 par dossier</span><span>Latence : 3 s (14 s à froid)</span></div>
+      </article>
+      <article class="carte-ag ">
+        <header><h3>Superviseur-décideur</h3><span class="nat-chip">CODE</span></header>
+        <p class="q">Dans quel ordre, et quand s'arrêter ?</p>
+        <dl>
+          <dt>Rôle</dt><dd>Appelle les agents dans un ordre fixe, borne l'exécution, enregistre leurs résultats et conclut.</dd>
+          <dt>Ne fait jamais</dt><dd>Chiffrer ou juger la fraude ; il est le seul à écrire l'état.</dd>
+          <dt>Entrée</dt><dd>Demande validée ; résultat de chaque agent.</dd>
+          <dt>Sortie</dt><dd>Section <b>issue</b>, trace en ajout seul.</dd>
+          <dt>Dépend de</dt><dd>Tous les agents.</dd>
+          <dt>Règles</dt><dd>§10 (règles de décision) ; bornes : 12 étapes, 8 s, 2 compléments.</dd>
+          <dt>Code</dt><dd><code>src/kaldera/superviseur.py</code></dd>
+          <dt>Exigences</dt><dd>E1 · E6</dd>
+        </dl>
+        <div class="chiffres"><span>Appels par demande : 1 à 2 (moyenne 1,12)</span><span>Latence : 0,01 ms</span></div>
+      </article>
+      <article class="carte-ag ">
+        <header><h3>1 · Éligibilité</h3><span class="nat-chip">CODE</span></header>
+        <p class="q">Le contrat couvre-t-il ce sinistre ?</p>
+        <dl>
+          <dt>Rôle</dt><dd>Contrôle contrat actif, cotisations, carence de 30 jours, délai de déclaration, garantie de la formule.</dd>
+          <dt>Ne fait jamais</dt><dd>Chiffrer : le plafond est appliqué par l'Estimation.</dd>
+          <dt>Entrée</dt><dd>Formule, statut, cotisations, dates, type de sinistre.</dd>
+          <dt>Sortie</dt><dd><b>eligibilite</b> : éligible ou non, avec les motifs.</dd>
+          <dt>Dépend de</dt><dd>Rien (premier agent). Non éligible : arrêt immédiat, règle 1.</dd>
+          <dt>Règles</dt><dd>§4 (conditions E1 à E5 de la spec).</dd>
+          <dt>Code</dt><dd><code>src/kaldera/agents/eligibilite.py</code></dd>
+          <dt>Exigences</dt><dd>E2</dd>
+        </dl>
+        <div class="chiffres"><span>Appels par demande : 1, toujours</span><span>Latence : 0,03 ms</span></div>
+      </article>
+      <article class="carte-ag ">
+        <header><h3>2 · Pièces</h3><span class="nat-chip">CODE</span></header>
+        <p class="q">Les pièces exigées sont-elles présentes, lisibles et cohérentes ?</p>
+        <dl>
+          <dt>Rôle</dt><dd>Vérifie présence, lisibilité et cohérence des dates avec la déclaration ; demande un complément si besoin.</dd>
+          <dt>Ne fait jamais</dt><dd>Juger le contenu d'une photo ; refuser sur une date (elle escalade).</dd>
+          <dt>Entrée</dt><dd>Type de sinistre, pièces, dépôts de l'assuré, date de survenance.</dd>
+          <dt>Sortie</dt><dd><b>pieces</b> : conformes, à redemander, factures lisibles, incohérences.</dd>
+          <dt>Dépend de</dt><dd>Éligibilité. Aucune donnée commune : ils pourraient tourner en parallèle, l'ordre fixe permet l'arrêt dès la règle 1.</dd>
+          <dt>Règles</dt><dd>§5, règle 2.</dd>
+          <dt>Code</dt><dd><code>src/kaldera/agents/pieces.py</code></dd>
+          <dt>Exigences</dt><dd>E2</dd>
+        </dl>
+        <div class="chiffres"><span>Appels par demande : 0 à 2 (moyenne 0,91)</span><span>Latence : 0,02 ms</span></div>
+      </article>
+      <article class="carte-ag ">
+        <header><h3>3 · Estimation</h3><span class="nat-chip">CODE</span></header>
+        <p class="q">Combien l'assureur rembourse-t-il ?</p>
+        <dl>
+          <dt>Rôle</dt><dd>Retient le plus petit du déclaré et du justifié, retranche la franchise, applique le plafond.</dd>
+          <dt>Ne fait jamais</dt><dd>Juger la fraude. Point ambigu tranché : le plafond est un montant, c'est elle qui l'applique.</dd>
+          <dt>Entrée</dt><dd>Montant déclaré, factures lisibles, formule.</dd>
+          <dt>Sortie</dt><dd><b>estimation</b> : justifié, retenu, estimé, plafond appliqué.</dd>
+          <dt>Dépend de</dt><dd>Pièces (les factures lisibles).</dd>
+          <dt>Règles</dt><dd>§6, règle 3.</dd>
+          <dt>Code</dt><dd><code>src/kaldera/agents/estimation.py</code></dd>
+          <dt>Exigences</dt><dd>E2</dd>
+        </dl>
+        <div class="chiffres"><span>Appels par demande : 0 à 1 (moyenne 0,76)</span><span>Latence : 0,02 ms</span></div>
+      </article>
+      <article class="carte-ag ">
+        <header><h3>4 · Anti-fraude</h3><span class="nat-chip">CODE</span></header>
+        <p class="q">Faut-il l'avis du partenaire, et que dit-il ?</p>
+        <dl>
+          <dt>Rôle</dt><dd>Relève les indicateurs F1 à F4 ; s'il y en a, interroge le partenaire et valide sa réponse.</dd>
+          <dt>Ne fait jamais</dt><dd>Émettre un avis lui-même ; envoyer plus de 7 champs.</dd>
+          <dt>Entrée</dt><dd>Montant, dates, historique, montant justifié.</dd>
+          <dt>Sortie</dt><dd><b>avis_fraude</b> : non requis, obtenu (niveau, score) ou indisponible.</dd>
+          <dt>Dépend de</dt><dd>Estimation (le montant justifié).</dd>
+          <dt>Règles</dt><dd>§7, §9 (mode dégradé), règle 4.</dd>
+          <dt>Code</dt><dd><code>src/kaldera/agents/antifraude.py</code></dd>
+          <dt>Exigences</dt><dd>E3 · E4 · E5</dd>
+        </dl>
+        <div class="chiffres"><span>Appels par demande : 0 à 1 (moyenne 0,74)</span><span>Latence : 0,01 ms sans appel, 37 ms avec</span></div>
+      </article>
+      <article class="carte-ag ext">
+        <header><h3>Partenaire anti-fraude</h3><span class="nat-chip">CODE</span></header>
+        <p class="q">Quel est le risque de fraude de ce dossier ?</p>
+        <dl>
+          <dt>Rôle</dt><dd>Service externe A2A, notre propre implémentation : score explicable par règles.</dd>
+          <dt>Ne fait jamais</dt><dd>Évaluer deux fois le même dossier ; accepter un champ hors contrat.</dd>
+          <dt>Entrée</dt><dd>7 champs envoyés par Kaldera.</dd>
+          <dt>Sortie</dt><dd>Niveau (faible, modéré, élevé), score, indicateurs.</dd>
+          <dt>Dépend de</dt><dd>Anti-fraude (seul appelant).</dd>
+          <dt>Règles</dt><dd>Contrat d'échange v2.0.</dd>
+          <dt>Code</dt><dd><code>partenaire_antifraude/app.py</code></dd>
+          <dt>Exigences</dt><dd>E3 · E4</dd>
+        </dl>
+        <div class="chiffres"><span>Appels par demande : 1 par dossier, jamais 2</span><span>Latence : 0,7 ms côté serveur</span></div>
+      </article>
+    </div>
+    <p class="autres"><b>Composants de code qui ne sont pas des agents</b> : les règles du §10 (la première qui s'applique fixe l'issue), le rapport de décision (version gestionnaire et version assuré) et la revue de fond (un signal facultatif, jamais une décision). Appels et latences mesurés sur 34 demandes des 28 scénarios fournis.</p>
   </main>
 </div>
 
@@ -516,6 +667,7 @@
       "<p>Une demande de remboursement entre par la <b>console</b>, traverse l'<b>équipe d'agents</b>, consulte au besoin le <b>partenaire anti-fraude</b>, et ressort en décision ou en escalade, avec un rapport.</p>" +
       "<ol class='guide'><li><b>Contexte</b> : qui parle à qui.</li><li><b>Plateforme</b> : ce qui tourne sur Google Cloud.</li><li><b>Moteur</b> : le superviseur et ses quatre agents.</li><li><b>Détails</b> : bornes, sections de l'état, règles, validation.</li></ol>" +
       "<p>Cliquez sur un bloc : la carte zoome dessus et ce panneau l'explique, avec les fichiers du code et les exigences qu'il couvre.</p>" +
+      "<p>Le bouton <b>Cartes des agents</b> ouvre une vue à part : une carte par agent avec son rôle, sa frontière, ses entrées et sorties, sa nature (LLM ou code), ses appels et sa latence.</p>" +
       "<p><b>Présenter</b> (touche <kbd>P</kbd>) lance un parcours en " + ETAPES.length + " étapes. Avancez avec <kbd>→</kbd>, <kbd>Espace</kbd> ou une télécommande, reculez avec <kbd>←</kbd>, quittez avec <kbd>Échap</kbd>.</p>" +
       "<h3>Agents : LLM ou code ?</h3><table class='tabagent'><tr><th>Agent</th><th>Nature</th><th>Appels</th><th>Latence</th></tr>" +
       "<tr><td>Analyse de dossier</td><td><b>LLM</b></td><td>2 / dossier</td><td>3 s</td></tr>" +
@@ -546,6 +698,21 @@
     $("panneau").innerHTML = h;
   }
   function aller(id) { var o = P[id]; select(o); zoomerSur(o); }
+
+  /* Deux vues : la carte zoomable et les cartes des agents */
+  function afficherVue(nom) {
+    var cartes = nom === "cartes";
+    if (cartes && etape >= 0) quitter();
+    document.querySelector("main:not(.agents-vue)").hidden = cartes;
+    $("agents-vue").hidden = !cartes;
+    $("vue-carte").setAttribute("aria-pressed", String(!cartes));
+    $("vue-cartes").setAttribute("aria-pressed", String(cartes));
+    document.querySelectorAll("[data-niv], #moins, #plus, #fit, #presenter").forEach(function (b) { b.disabled = cartes; });
+    if (!cartes) { mesurer(); ajuster(true); }
+    try { history.replaceState(null, "", cartes ? "#agents" : location.pathname + location.search); } catch (e) { /* cadre sans historique */ }
+  }
+  $("vue-carte").addEventListener("click", function () { afficherVue("carte"); });
+  $("vue-cartes").addEventListener("click", function () { afficherVue("cartes"); });
 
   var etape = -1;
   function ancre(h) { try { history.replaceState(null, "", h || location.pathname + location.search); } catch (e) { /* cadre sans historique */ } }
@@ -643,6 +810,7 @@
 
   function init() {
     mesurer(); ajuster(true); guide();
+    if (location.hash === "#agents") { afficherVue("cartes"); return; }
     var m = /^#etape-(\d+)$/.exec(location.hash), b = /^#bloc-([a-z_]+)$/.exec(location.hash);
     if (m) presenter(+m[1] - 1); else if (b && P[b[1]]) aller(b[1]);
   }
