@@ -206,44 +206,44 @@
     "<p>Trois publics. L'assuré reçoit la version courte du rapport, sans le détail anti-fraude. Le gestionnaire reprend les dossiers escaladés (files <b>gestionnaire</b> et <b>cellule_fraude</b>) avec le rapport complet, et <b>examine les photos</b> : le système n'en juge jamais le contenu.</p><p>Un <b>expert d'assurance</b> peut contrôler les faits en cas de besoin. Son retour vers le système (nouveaux constats, nouvelle décision) n'est pas encore branché : c'est une évolution possible.</p>",
     ["src/kaldera/rapport.py"]);
 
-  b("console", null, "core", 440, 100, 1100, 1000, "Console Kaldera", "Cloud Run · europe-west9 · image Docker", [], [],
+  b("console", null, "core", 440, 100, 1100, 1060, "Console Kaldera", "Cloud Run · europe-west9 · image Docker", [], [],
     "<p>Le service Kaldera, déployé sur Cloud Run. Il porte l'interface web et le moteur d'équipe, et appelle le partenaire en A2A.</p><p>Il détecte si le partenaire est <b>simulé</b> ou <b>réel</b> et refuse de forcer une panne sur le service réel.</p>",
     ["src/kaldera/web.py", "Dockerfile", "scripts/deployer_console.sh"], { reveal: 1.2 });
 
-  b("web", "console", "plain", 480, 215, 500, 110, "Interface web", "FastAPI · console.html",
+  b("web", "console", "plain", 480, 215, 500, 170, "Interface web", "FastAPI · console.html",
     ["Importer les pièces, rejouer, lire", "fiches, rapports et métriques"], [],
     "<p>Console FastAPI : des boutons importent les pièces du dossier (contrat, déclaration, factures, photos, plainte) ; la liste des 28 scénarios de test est repliée. Rejeu contre le partenaire, réglage du partenaire simulé, fiches, rapports, traces et métriques par agent. Une demande peut aussi être soumise en JSON.</p>",
     ["src/kaldera/web.py", "src/kaldera/console.html"]);
 
-  b("extraction", "console", "core", 1000, 215, 500, 110, "Analyse de dossier", "pièces → demande à valider",
+  b("extraction", "console", "core", 1000, 215, 500, 170, "Analyse de dossier", "pièces → demande à valider",
     ["PDF lus, photos jamais jugées", "une fiche à relire avant traitement"], ["champs, ou gpt-5.4-mini (facultatif)"],
     "<div class='nat llm'><p><b>LLM : gpt-5.4-mini (repli sur du code)</b></p><p>Appels par demande : <b>2 par dossier (contrat, déclaration)</b></p><p>Latence mesurée : <b>3 s à chaud, 14 s à froid</b></p><p>Entrée : pièces PDF et photos importées. Sortie : demande JSON et fiche, validées par un humain.</p></div><p>Transforme les pièces importées (contrat, déclaration, factures, photos, dépôt de plainte, ou un dossier complet en un PDF) en demande au format du §3, plus une <b>fiche à valider</b> avant tout traitement.</p><p>Deux extracteurs derrière une <b>seule validation</b> : la lecture par champs, déterministe (défaut), ou le modèle gpt-5.4-mini, facultatif (<b>KALDERA_EXTRACTION</b>). Le contenu du PDF est une donnée, jamais une consigne ; champ obligatoire absent ou illisible : le traitement est bloqué.</p><p><b>Photos</b> : seule leur présence et leur format (JPEG ou PNG) sont vérifiés, jamais ce qu'elles montrent ; la fiche écrit « jointe, contenu non analysé ». Les 15 dossiers de test de bout en bout, en deux variantes (étiquetée et texte libre), sont dans <b>exemples/cas/</b>.</p>",
     ["src/kaldera/extraction.py", "exemples/cas/", "scripts/generer_cas_exemples.py"]);
 
-  b("moteur", "console", "plain", 480, 350, 1020, 540, "Moteur d'équipe", "superviseur-décideur · ordre fixe", [], [],
+  b("moteur", "console", "plain", 480, 410, 1020, 540, "Moteur d'équipe", "superviseur-décideur · ordre fixe", [], [],
     "<p>L'équipe d'agents. Le superviseur-décideur appelle les agents dans un ordre fixe, s'arrête dès qu'une règle du §10 conclut, et est le seul à écrire l'état.</p><p>Chaque demande finit par une décision ou une escalade motivée, jamais par un silence (E1).</p>",
     ["src/kaldera/superviseur.py", "src/kaldera/__init__.py"], { reveal: 1.8 });
 
-  b("superviseur", "moteur", "core", 510, 455, 300, 200, "Superviseur-décideur", "enchaîne, borne, conclut",
+  b("superviseur", "moteur", "core", 510, 515, 300, 200, "Superviseur-décideur", "enchaîne, borne, conclut",
     ["ordre fixe, un seul écrivain", "contrôle de forme des sorties", "filet : jamais sans issue"],
     ["bornes : 12 étapes · 8 s", "2 compléments, arrêt si idem", "trace : agent · action · ecrit"],
     "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>1 à 2 (moyenne 1,12)</b></p><p>Latence mesurée : <b>0,01 ms</b></p><p>Entrée : la demande validée. Sortie : l'issue et la trace.</p></div><p>Enchaîne les agents, vérifie la forme de chaque sortie, applique les bornes et conclut la demande. Il est l'auteur de la section <b>issue</b>.</p><p>Un agent défaillant ou indéterminé, ou une borne atteinte, donne une escalade motivée avec <b>arret</b> rempli.</p>",
     ["src/kaldera/superviseur.py", "src/kaldera/bornes.py"]);
 
-  b("elig", "moteur", "plain", 860, 450, 290, 90, "1 · Éligibilité", "le contrat couvre-t-il ?", ["écrit : eligibilite"], [],
+  b("elig", "moteur", "plain", 860, 510, 290, 90, "1 · Éligibilité", "le contrat couvre-t-il ?", ["écrit : eligibilite"], [],
     "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>1, toujours</b></p><p>Latence mesurée : <b>0,03 ms</b></p><p>Entrée : formule, statut, dates, type. Sortie : éligible ou non, avec les motifs.</p></div><p>Le contrat couvre-t-il ce sinistre ? Contrat actif, cotisations à jour, carence de 30 jours, délai de déclaration, garantie de la formule.</p><p>Ne chiffre jamais : le plafond n'est pas son affaire.</p>",
     ["src/kaldera/agents/eligibilite.py"]);
-  b("pieces", "moteur", "plain", 1180, 450, 290, 90, "2 · Pièces", "présentes et lisibles ?", ["écrit : pieces"], [],
+  b("pieces", "moteur", "plain", 1180, 510, 290, 90, "2 · Pièces", "présentes et lisibles ?", ["écrit : pieces"], [],
     "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>0 à 2 (moyenne 0,91)</b></p><p>Latence mesurée : <b>0,02 ms</b></p><p>Entrée : type de sinistre, pièces, dates des pièces. Sortie : conformes, à redemander, incohérences.</p></div><p>Les pièces exigées sont-elles présentes et lisibles ? Elle <b>demande</b> un complément ; le superviseur l'<b>exécute</b> en lisant le dépôt suivant, au plus 2 fois, et s'arrête si le dépôt est identique.</p><p><b>Photo</b> : exigée (présence), mais son contenu n'est pas jugé. L'agent la déclare « non analysée » dans sa section, pour que le rapport la signale à un humain.</p>",
     ["src/kaldera/agents/pieces.py", "src/kaldera/espace_assure.py"]);
-  b("estim", "moteur", "plain", 860, 560, 290, 90, "3 · Estimation", "combien rembourser ?", ["écrit : estimation · plafond"], [],
+  b("estim", "moteur", "plain", 860, 620, 290, 90, "3 · Estimation", "combien rembourser ?", ["écrit : estimation · plafond"], [],
     "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>0 à 1 (moyenne 0,76)</b></p><p>Latence mesurée : <b>0,02 ms</b></p><p>Entrée : montant déclaré, factures, formule. Sortie : montant estimé, plafond.</p></div><p>Combien rembourser ? Montant retenu moins la franchise, puis plafonné par la formule.</p><p><b>Frontière tranchée :</b> le plafond est un montant, donc l'Estimation l'applique et le signale (NOM-05).</p>",
     ["src/kaldera/agents/estimation.py"]);
-  b("anti", "moteur", "plain", 1180, 560, 290, 90, "4 · Anti-fraude", "consulte le partenaire", ["écrit : avis_fraude · F1 à F4"], [],
+  b("anti", "moteur", "plain", 1180, 620, 290, 90, "4 · Anti-fraude", "consulte le partenaire", ["écrit : avis_fraude · F1 à F4"], [],
     "<div class='nat'><p><b>Code déterministe</b></p><p>Appels par demande : <b>0 à 1 (moyenne 0,74)</b></p><p>Latence mesurée : <b>0,01 ms sans appel, 37 ms avec</b></p><p>Entrée : montant, dates, historique. Sortie : indicateurs F1 à F4 et avis. Le partenaire est interrogé pour 18 demandes sur 34.</p></div><p>Calcule les indicateurs F1 à F4 et, si l'un d'eux est présent, consulte le partenaire. N'émet jamais d'avis lui-même.</p><p>Une réponse invalide, absente ou en doublon donne un avis <b>indisponible</b>.</p>",
     ["src/kaldera/agents/antifraude.py", "src/kaldera/partenaire.py"]);
 
-  b("etat", "moteur", "plain", 510, 680, 460, 200, "État partagé", "un seul écrivain", [], [],
+  b("etat", "moteur", "plain", 510, 740, 460, 200, "État partagé", "un seul écrivain", [], [],
     "<p>L'état d'une demande, en mémoire : cinq sections métier plus l'exécution. Les agents n'ont <b>aucun droit d'écriture</b> : ils renvoient un résultat, le superviseur l'enregistre au nom de l'agent. Chaque agent ne lit que sa vue (moindre privilège).</p>",
     ["src/kaldera/etat.py", "src/kaldera/vues.py"], { reveal: 3.0 });
 
@@ -256,28 +256,28 @@
     ["execution", "Trace en ajout seul (agent, action, ecrit, statut, durée) et borne atteinte (arret). Écrite par le superviseur, hors sections métier."]
   ];
   chips.forEach(function (c, i) {
-    b("s_" + c[0], "etat", "chip", 525 + (i % 3) * 145, 780 + Math.floor(i / 3) * 52, 135, 42, c[0], "", [], [],
+    b("s_" + c[0], "etat", "chip", 525 + (i % 3) * 145, 840 + Math.floor(i / 3) * 52, 135, 42, c[0], "", [], [],
       "<p>" + c[1] + "</p>", ["src/kaldera/etat.py"], { cls: c[0] === "issue" ? "issue" : "" });
   });
 
-  b("decision", "moteur", "plain", 1000, 680, 230, 200, "Règles du §10", "code déterministe",
+  b("decision", "moteur", "plain", 1000, 740, 230, 200, "Règles du §10", "code déterministe",
     ["1 non éligible : refus", "2 pièces : escalade", "3 montant nul : refus", "4 avis · mode dégradé"], ["5 seuil · 6 acceptée"],
     "<p>Les six règles du §10, dans l'ordre : la première qui s'applique fixe l'issue.</p><p>Le <b>mode dégradé</b> du §9 en fait partie : partenaire indisponible, au plus 1 500 € la demande continue, au-delà elle part à la cellule anti-fraude.</p>",
     ["src/kaldera/decision.py"]);
-  b("rapport", "moteur", "plain", 1260, 680, 210, 200, "Rapport", "de décision",
+  b("rapport", "moteur", "plain", 1260, 740, 210, 200, "Rapport", "de décision",
     ["version gestionnaire", "version assuré", "cite chaque règle"], ["testé, déterministe", "sans donnée perso."],
     "<p>Un rapport par demande qui motive la décision étape par étape, en citant la règle. Version complète pour le gestionnaire, version courte pour l'assuré.</p><p>Il signale les photos « reçues, contenu non analysé — à examiner par un gestionnaire ou un expert » : le rapport ne prétend jamais qu'une photo a été vérifiée.</p><p>Produit sans LLM, à partir de l'état et de la trace.</p>",
     ["src/kaldera/rapport.py"]);
 
-  b("revue", "console", "opt", 480, 915, 330, 150, "Revue de fond", "signal seul",
+  b("revue", "console", "opt", 480, 975, 330, 150, "Revue de fond", "signal seul",
     ["règles (défaut), gpt-5.4-mini", "ou System One (hypothèse)"], ["ne modifie jamais une valeur"],
     "<p>Second regard <b>facultatif</b>, choisi par <b>KALDERA_REVUE</b> : regles (défaut), aucune, llm ou system_one.</p><p>Elle signale, ne décide pas : en cas de désaccord, le sous-agent a raison. Le signal va dans la trace, les métriques et le rapport.</p>",
     ["src/kaldera/revue.py"]);
-  b("hist", "console", "opt", 830, 915, 340, 150, "Historique", "données neutralisées",
+  b("hist", "console", "opt", 830, 975, 340, 150, "Historique", "données neutralisées",
     ["JSONL en ajout seul", "id_client pseudonymisé (HMAC)"], ["texte libre jamais stocké"],
     "<p>Historique JSONL en ajout seul, activé par <b>KALDERA_HISTORIQUE</b>. Liste blanche de champs, id_client pseudonymisé par HMAC, aucun texte libre ni donnée personnelle.</p><p>Une erreur d'écriture ne bloque jamais le traitement.</p>",
     ["src/kaldera/historique.py"]);
-  b("client", "console", "plain", 1190, 915, 310, 150, "Client A2A", "liste blanche · 3 s",
+  b("client", "console", "plain", 1190, 975, 310, 150, "Client A2A", "liste blanche · 3 s",
     ["7 champs, un appel par dossier", "validation en 3 couches"], ["transport → schéma → cohérence"],
     "<p>Le client A2A ne construit le message que champ par champ (les 7 champs du contrat), n'appelle <b>qu'une fois par dossier</b>, abandonne à 3 s, puis valide la réponse en trois couches.</p><p>Un registre anti-doublon et un disjoncteur sont partagés par les demandes d'un lot.</p>",
     ["src/kaldera/partenaire.py"]);
@@ -314,15 +314,15 @@
   var ED = [
     { p: [[350, 630], [440, 630]], l: "HTTPS", lx: 395, ly: 612 },
     { p: [[440, 700], [350, 700]], l: "rapport", lx: 395, ly: 726 },
-    { p: [[980, 270], [1000, 270]], needs: "web" }, { p: [[1250, 325], [1250, 350]], needs: "moteur" },
+    { p: [[980, 270], [1000, 270]], needs: "web" }, { p: [[1250, 385], [1250, 410]], needs: "moteur" },
     { p: [[1540, 640], [1700, 640]], l: "A2A", lx: 1620, ly: 624, unless: "client", dash: 1 },
-    { p: [[1500, 990], [1620, 990], [1620, 590], [1730, 590]], l: "A2A", lx: 1590, ly: 800, needs: "client", dash: 1 },
-    { p: [[990, 1200], [990, 1100]], l: "déploie", lx: 1006, ly: 1160, anchor: "start" },
+    { p: [[1500, 1050], [1620, 1050], [1620, 590], [1730, 590]], l: "A2A", lx: 1590, ly: 800, needs: "client", dash: 1 },
+    { p: [[990, 1200], [990, 1160]], l: "déploie", lx: 1006, ly: 1186, anchor: "start" },
     { p: [[1540, 1330], [2030, 1330], [2030, 970]], l: "déploie", lx: 1790, ly: 1314 },
     { p: [[800, 1367], [830, 1367]], needs: "gh" }, { p: [[1160, 1367], [1190, 1367]], needs: "gh" },
-    { p: [[810, 550], [860, 550]], needs: "superviseur" },
-    { p: [[660, 655], [660, 680]], needs: "etat" },
-    { p: [[970, 780], [1000, 780]], needs: "decision" }, { p: [[1230, 780], [1260, 780]], needs: "rapport" }
+    { p: [[810, 610], [860, 610]], needs: "superviseur" },
+    { p: [[660, 715], [660, 740]], needs: "etat" },
+    { p: [[970, 840], [1000, 840]], needs: "decision" }, { p: [[1230, 840], [1260, 840]], needs: "rapport" }
   ];
 
   /* ---------- Nature des composants : pastille visible dès le niveau « Moteur » ---------- */
@@ -397,6 +397,12 @@
       var t1 = el("text", { x: o.x + 16, y: o.y + fs[2], "class": "tt", "font-size": fs[0] }, g); t1.textContent = o.title;
       var t2 = el("text", { x: o.x + 16, y: o.y + fs[3], "class": "ts", "font-size": fs[1] }, g); t2.textContent = o.sub;
       var d0 = o.depth === 0 ? 106 : o.depth === 1 ? 91 : 82, step = o.depth === 0 ? 24 : 21, fz = o.depth === 0 ? 17 : 16;
+      /* Adaptation : le détail ne déborde jamais du cadre. Si ses lignes ne tiennent pas dans la hauteur
+         ou la largeur du bloc, l'interligne puis la police diminuent jusqu'à ce qu'elles tiennent. */
+      var lignes = o.det.concat(o.more), nl = lignes.length, haut = o.h - d0 - 12;
+      if (nl > 1 && (nl - 1) * step > haut) { step = Math.max(12, haut / (nl - 1)); fz = Math.max(11, Math.min(fz, step * 0.8)); }
+      var larg = o.w - 32, pire = lignes.reduce(function (m, s) { return Math.max(m, s.length); }, 0);
+      if (pire * fz * 0.56 > larg) fz = Math.max(10, larg / (pire * 0.56));
       o.gd = el("g", { "class": "det" }, g); o.gm = el("g", { "class": "det2" }, g);
       o.det.forEach(function (s, i) { var e = el("text", { x: o.x + 16, y: o.y + d0 + i * step, "class": "td", "font-size": fz }, o.gd); e.textContent = s; });
       o.more.forEach(function (s, i) { var e = el("text", { x: o.x + 16, y: o.y + d0 + (o.det.length + i) * step, "class": "td", "font-size": fz }, o.gm); e.textContent = s; });
